@@ -1,0 +1,9 @@
+﻿/.idea
+/.vs
+/out
+/tests/lib
+/Folder.DotSettings.user
+/CMakeSettings.json
+/CMakePresets.json
+/build
+/cmake-build-debug
