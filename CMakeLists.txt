@@ -10,11 +10,6 @@ add_subdirectory(src)
 
 target_link_libraries(${PROJECT_NAME} ${PROJECT_NAME}.lib)
 
-find_program(GCOV_PATH gcov)
-if(NOT GCOV_PATH)
-  message(FATAL_ERROR "Code coverage analysis requires gcov!")
-endif()
-
 enable_testing()
 
 add_subdirectory(test)
