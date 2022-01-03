@@ -1,5 +1,6 @@
 #include "Runner.h"
 #include "Logger.h"
+#include "Parser.h"
 #include "Scanner.h"
 
 #include <fstream>
@@ -20,7 +21,7 @@ int cpplox::Runner::runScript(const std::string &filename) {
             return content;
         } catch (std::exception &e) {
             std::ostringstream stream;
-            stream << "Couldn't open Input source file (" << e.what() << ").";
+            stream << "Couldn't open input source file (" << e.what() << ").";
             logger::trace(__LINE__,__FILE__, stream.str());
             return "";
         }
@@ -49,5 +50,8 @@ int cpplox::Runner::run(const std::string &source) {
     const std::vector<Token> tokens = scanner.scanTokens();
     // For now, just print the tokens.
     for (const Token &token: tokens) { std::cout << token << std::endl; }
+
+    Parser parser(tokens);
+    auto expression = parser.parse();
     return 0;
 }

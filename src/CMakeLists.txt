@@ -9,13 +9,16 @@ target_sources(${PROJECT_NAME}.lib
     Runner.cpp
     Scanner.cpp
     Token.cpp
-    
+    Parser.cpp
+    Expr.cpp
+
   PUBLIC
     Logger.h
     Runner.h
     Scanner.h
     Token.h
-   )
+    Parser.h 
+    Expr.h)
 
 target_link_libraries(${PROJECT_NAME}.lib PRIVATE magic_enum)
 

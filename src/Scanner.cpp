@@ -78,19 +78,22 @@ void cpplox::Scanner::scanToken() {
             line++;
             break;
 
+        // parse strings
         case '"': {
             if (auto value = parseStr()) addToken(TokenType::STRING, *value);
             break;
         }
 
         default: {
-            if (isDigit(c)) {
-                if (auto value = parseNum()) addToken(TokenType::NUMBER, *value);
-            } else if (
-                isAlpha(c)) {
+            // parse digits
+            if (isDigit(c)) { if (auto value = parseNum()) addToken(TokenType::NUMBER, *value); }
+            // parse identifiers
+            else if (isAlpha(c)) {
                 if (const auto type = parseIdentifier()) addToken(*type);
                 addToken(TokenType::IDENTIFIER);
-            } else logger::trace(line, source, "Unexpected character.");
+            }
+            // unknown lexemes
+            else logger::trace(line, source, "Unexpected character.");
             break;
         }
     }
