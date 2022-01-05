@@ -1,21 +1,27 @@
 #include "Scanner.h"
-
 #include "Logger.h"
+#include "Meta.h"
 
-cpplox::Scanner::Scanner(std::string source)
-    : source(std::move(source)) { }
+cpplox::Scanner::Scanner(std::string source) : source(std::move(source)) {}
 
 auto cpplox::Scanner::scanTokens() -> std::vector<Token> {
     while (!isAtEnd()) {
         // We are at the beginning of the next lexeme.
         start = current;
-        scanToken();
+        try {
+            scanToken();
+        } catch (const TokenizationErr &err) {
+            Errors::hadError = true;
+            logger::error(err);
+        }
     }
     tokens.emplace_back(TokenType::EOF_TOKEN, "", std::monostate{}, line);
     return tokens;
 }
 
-bool cpplox::Scanner::isAtEnd() const { return current >= static_cast<int>(source.length()); }
+bool cpplox::Scanner::isAtEnd() const {
+    return current >= static_cast<int>(source.length());
+}
 
 void cpplox::Scanner::scanToken() {
     switch (const char c = advance()) {
@@ -65,8 +71,11 @@ void cpplox::Scanner::scanToken() {
 
         case '/':
             // A comment goes until the end of the line.
-            if (match('/')) while (peek() != '\n' && !isAtEnd()) advance();
-            else addToken(TokenType::SLASH);
+            if (match('/'))
+                while (peek() != '\n' && !isAtEnd())
+                    advance();
+            else
+                addToken(TokenType::SLASH);
             break;
 
         case ' ':
@@ -80,29 +89,35 @@ void cpplox::Scanner::scanToken() {
 
         // parse strings
         case '"': {
-            if (auto value = parseStr()) addToken(TokenType::STRING, *value);
+            if (auto value = parseStr())
+                addToken(TokenType::STRING, *value);
             break;
         }
 
         default: {
             // parse digits
-            if (isDigit(c)) { if (auto value = parseNum()) addToken(TokenType::NUMBER, *value); }
+            if (isDigit(c)) {
+                if (auto value = parseNum())
+                    addToken(TokenType::NUMBER, *value);
+            }
             // parse identifiers
             else if (isAlpha(c)) {
-                if (const auto type = parseIdentifier()) addToken(*type);
+                if (const auto type = parseIdentifier())
+                    addToken(*type);
                 addToken(TokenType::IDENTIFIER);
             }
             // unknown lexemes
-            else logger::trace(line, source, "Unexpected character.");
-            break;
+            else
+                throw TokenizationErr(Meta::sourceFile, line, "Unexpected character.");
         }
     }
 }
 
-
 bool cpplox::Scanner::match(char expected) {
-    if (isAtEnd()) return false;
-    if (source[current] != expected) return false;
+    if (isAtEnd())
+        return false;
+    if (source[current] != expected)
+        return false;
 
     current++;
     return true;
@@ -114,21 +129,26 @@ bool cpplox::Scanner::isAlpha(char c) {
     return (c >= 'a' && c <= 'z') || (c >= 'A' && c <= 'Z') || c == '_';
 }
 
-bool cpplox::Scanner::isAlphaNumeric(char c) { return isAlpha(c) || isDigit(c); }
+bool cpplox::Scanner::isAlphaNumeric(char c) {
+    return isAlpha(c) || isDigit(c);
+}
 
 char cpplox::Scanner::peek() const {
-    if (isAtEnd()) return '\0';
+    if (isAtEnd())
+        return '\0';
     return source[current];
 }
 
 char cpplox::Scanner::peekNext() const {
-    if (current + 1 >= static_cast<int>(source.length())) return '\0';
+    if (current + 1 >= static_cast<int>(source.length()))
+        return '\0';
     return source[current + 1];
 }
 
 auto cpplox::Scanner::parseStr() -> std::optional<std::string> {
     while (peek() != '"' && !isAtEnd()) {
-        if (peek() == '\n') line++;
+        if (peek() == '\n')
+            line++;
         advance();
     }
     if (isAtEnd()) {
@@ -143,29 +163,35 @@ auto cpplox::Scanner::parseStr() -> std::optional<std::string> {
 }
 
 auto cpplox::Scanner::parseNum() -> std::optional<double> {
-    while (isDigit(peek())) advance();
+    while (isDigit(peek()))
+        advance();
     // Look for a fractional part.
     if (peek() == '.' && isDigit(peekNext())) {
         // Consume the "."
         advance();
-        while (isDigit(peek())) advance();
+        while (isDigit(peek()))
+            advance();
     }
     return std::stod(source.substr(start, current - start));
 }
 
-
 auto cpplox::Scanner::parseIdentifier() -> std::optional<TokenType> {
-    while (isAlphaNumeric(peek())) advance();
+    while (isAlphaNumeric(peek()))
+        advance();
     const std::string text = source.substr(start, current - start);
-    if (keywords.find(text) == keywords.end()) { return TokenType::IDENTIFIER; }
+    if (keywords.find(text) == keywords.end()) {
+        return TokenType::IDENTIFIER;
+    }
     return std::nullopt;
 }
 
 char cpplox::Scanner::advance() { return source[current++]; }
 
-void cpplox::Scanner::addToken(TokenType type) { addToken(type, std::monostate{}); }
+void cpplox::Scanner::addToken(TokenType type) {
+    addToken(type, std::monostate{});
+}
 
-void cpplox::Scanner::addToken(TokenType type, const Literal &literal) {
+void cpplox::Scanner::addToken(TokenType type, const Object &literal) {
     std::string text = source.substr(start, current - start);
     tokens.emplace_back(type, text, literal, line);
 }

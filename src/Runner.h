@@ -8,7 +8,9 @@ namespace cpplox {
     public:
         static int runScript(const std::string &filename);
         static int runREPL();
-        static int run(const std::string &source);
+
+    private:
+        static void run(const std::string &source);
     };
 }// namespace cpplox
 
