@@ -14,9 +14,9 @@ namespace cpplox {
     class Interpreter {
     public:
         void interpret(const pExpr &pExpr);
+        Object evaluate(const pExpr &pExpr);
 
     private:
-        Object evaluate(const pExpr &pExpr);
 
         Object evalBinaryExpr(const pBinaryExpr &pExpr);
         Object evalGroupingExpr(const pGroupingExpr &pExpr);

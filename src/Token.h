@@ -1,7 +1,7 @@
 #ifndef CPPLOX_TOKEN_H
 #define CPPLOX_TOKEN_H
 
-#include "magic_enum.hpp"
+#include "lib/magic_enum/include/magic_enum.hpp"
 #include <ostream>
 #include <string>
 #include <utility>
