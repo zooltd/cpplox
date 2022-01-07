@@ -16,7 +16,7 @@ namespace cpplox {
     public:
         explicit Parser(std::vector<Token> tokens) : tokens(std::move(tokens)) {}
 
-        auto parse() -> pExpr;
+        auto parse() -> AST::pExpr;
 
     private:
         std::vector<Token> tokens;
@@ -34,13 +34,13 @@ namespace cpplox {
         Token advance();
         Token consumeOrError(TokenType type, const std::string &message);
 
-        auto expression() -> pExpr;
-        auto equality() -> pExpr;
-        auto comparison() -> pExpr;
-        auto term() -> pExpr;
-        auto factor() -> pExpr;
-        auto unary() -> pExpr;
-        auto primary() -> pExpr;
+        auto expression() -> AST::pExpr;
+        auto equality() -> AST::pExpr;
+        auto comparison() -> AST::pExpr;
+        auto term() -> AST::pExpr;
+        auto factor() -> AST::pExpr;
+        auto unary() -> AST::pExpr;
+        auto primary() -> AST::pExpr;
 
         auto error(const Token &token, const std::string &msg) const -> ParseErr;
     };

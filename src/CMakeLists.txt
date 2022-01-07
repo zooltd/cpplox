@@ -10,6 +10,7 @@ target_sources(${PROJECT_NAME}.lib
         Parser.cpp
         Runner.cpp
         Scanner.cpp
+        Stmt.cpp
 
         PUBLIC
         Errors.h
@@ -21,6 +22,7 @@ target_sources(${PROJECT_NAME}.lib
         Parser.h
         Runner.h
         Scanner.h
+        Stmt.h
         Token.h)
 
 target_link_libraries(${PROJECT_NAME}.lib PRIVATE magic_enum)

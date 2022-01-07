@@ -2,89 +2,89 @@
 #include "Logger.h"
 #include "Meta.h"
 
-auto cpplox::Parser::parse() -> pExpr {
+auto cpplox::Parser::parse() -> AST::pExpr {
     try {
         return expression();
     } catch (ParseErr &err) {
         Errors::hadError = true;
         logger::error(err);
-        return pExpr{};
+        return AST::pExpr{};
     }
 }
 
 // expression -> equality
-auto cpplox::Parser::expression() -> pExpr { return equality(); }
+auto cpplox::Parser::expression() -> AST::pExpr { return equality(); }
 
 // equality -> comparison ( ( "!=" | "==" ) comparison )*
-auto cpplox::Parser::equality() -> pExpr {
-    pExpr expr = comparison();
+auto cpplox::Parser::equality() -> AST::pExpr {
+    AST::pExpr expr = comparison();
     while (match(TokenType::BANG_EQUAL, TokenType::EQUAL_EQUAL)) {
         Token op = previous();
-        pExpr right = comparison();
-        expr = std::make_unique<BinaryExpr>(std::move(expr), op, std::move(right));
+        AST::pExpr right = comparison();
+        expr = std::make_unique<AST::BinaryExpr>(std::move(expr), op, std::move(right));
     }
     return expr;
 }
 
 // comparison -> term ( ( ">" | ">=" | "<" | "<=" ) term )*
-auto cpplox::Parser::comparison() -> pExpr {
-    pExpr expr = term();
+auto cpplox::Parser::comparison() -> AST::pExpr {
+    AST::pExpr expr = term();
     while (match(TokenType::GREATER, TokenType::GREATER_EQUAL, TokenType::LESS,
                  TokenType::LESS_EQUAL)) {
         Token op = previous();
-        pExpr right = term();
-        expr = std::make_unique<BinaryExpr>(std::move(expr), op, std::move(right));
+        AST::pExpr right = term();
+        expr = std::make_unique<AST::BinaryExpr>(std::move(expr), op, std::move(right));
     }
     return expr;
 }
 
 // term -> factor ( ( "-" | "+" ) factor )*
-auto cpplox::Parser::term() -> pExpr {
-    pExpr expr = factor();
+auto cpplox::Parser::term() -> AST::pExpr {
+    AST::pExpr expr = factor();
     while (match(TokenType::MINUS, TokenType::PLUS)) {
         Token op = previous();
-        pExpr right = factor();
-        expr = std::make_unique<BinaryExpr>(std::move(expr), op, std::move(right));
+        AST::pExpr right = factor();
+        expr = std::make_unique<AST::BinaryExpr>(std::move(expr), op, std::move(right));
     }
     return expr;
 }
 
 // factor -> unary ( ( "/" | "*" ) unary )*
-auto cpplox::Parser::factor() -> pExpr {
-    pExpr expr = unary();
+auto cpplox::Parser::factor() -> AST::pExpr {
+    AST::pExpr expr = unary();
     while (match(TokenType::SLASH, TokenType::STAR)) {
         Token op = previous();
-        pExpr right = unary();
-        expr = std::make_unique<BinaryExpr>(std::move(expr), op, std::move(right));
+        AST::pExpr right = unary();
+        expr = std::make_unique<AST::BinaryExpr>(std::move(expr), op, std::move(right));
     }
     return expr;
 }
 
 // unary -> ( "!" | "-" ) unary | primary
-auto cpplox::Parser::unary() -> pExpr {
+auto cpplox::Parser::unary() -> AST::pExpr {
     if (match(TokenType::BANG, TokenType::MINUS)) {
         Token op = previous();
-        pExpr right = unary();
-        return std::make_unique<UnaryExpr>(op, std::move(right));
+        AST::pExpr right = unary();
+        return std::make_unique<AST::UnaryExpr>(op, std::move(right));
     }
     return primary();
 }
 
 // primary -> NUMBER | STRING | "true" | "false" | "nil" | "(" expression ")"
-auto cpplox::Parser::primary() -> pExpr {
+auto cpplox::Parser::primary() -> AST::pExpr {
     if (match(TokenType::FALSE_TOKEN))
-        return std::make_unique<LiteralExpr>(false);
+        return std::make_unique<AST::LiteralExpr>(false);
     if (match(TokenType::TRUE_TOKEN))
-        return std::make_unique<LiteralExpr>(true);
+        return std::make_unique<AST::LiteralExpr>(true);
     if (match(TokenType::NIL))
-        return std::make_unique<LiteralExpr>(nullptr);
+        return std::make_unique<AST::LiteralExpr>(nullptr);
     if (match(TokenType::NUMBER, TokenType::STRING)) {
-        return std::make_unique<LiteralExpr>(previous().literal);
+        return std::make_unique<AST::LiteralExpr>(previous().literal);
     }
     if (match(TokenType::LEFT_PAREN)) {
-        pExpr expr = expression();
+        AST::pExpr expr = expression();
         consumeOrError(TokenType::RIGHT_PAREN, "Expect ')' after expression.");
-        return std::make_unique<GroupingExpr>(std::move(expr));
+        return std::make_unique<AST::GroupingExpr>(std::move(expr));
     }
     // does not match any terminals
     throw error(peek(), "Expect expression.");

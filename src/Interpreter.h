@@ -13,15 +13,15 @@ namespace cpplox {
 
     class Interpreter {
     public:
-        void interpret(const pExpr &pExpr);
-        Object evaluate(const pExpr &pExpr);
+        void interpret(const AST::pExpr &pExpr);
+        Object evaluate(const AST::pExpr &pExpr);
 
     private:
 
-        Object evalBinaryExpr(const pBinaryExpr &pExpr);
-        Object evalGroupingExpr(const pGroupingExpr &pExpr);
-        Object evalLiteralExpr(const pLiteralExpr &pExpr);
-        Object evalUnaryExpr(const pUnaryExpr &pExpr);
+        Object evalBinaryExpr(const AST::pBinaryExpr &pExpr);
+        Object evalGroupingExpr(const AST::pGroupingExpr &pExpr);
+        Object evalLiteralExpr(const AST::pLiteralExpr &pExpr);
+        Object evalUnaryExpr(const AST::pUnaryExpr &pExpr);
 
         bool isTruthy(const Object &obj) const;
         void checkNumberOperand(const Token &op, const Object &operand);

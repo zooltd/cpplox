@@ -6,7 +6,7 @@
 #include <any>
 #include <memory>
 
-namespace cpplox {
+namespace cpplox::AST {
 
     class BinaryExpr;
     class GroupingExpr;
@@ -48,6 +48,6 @@ namespace cpplox {
         explicit GroupingExpr(pExpr expression);
     };
 
-}// namespace cpplox
+}// namespace cpplox::AST
 
 #endif// CPPLOX_EXPR_H
