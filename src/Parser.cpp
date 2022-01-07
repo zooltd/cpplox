@@ -2,14 +2,34 @@
 #include "Logger.h"
 #include "Meta.h"
 
-auto cpplox::Parser::parse() -> AST::pExpr {
+auto cpplox::Parser::parse() -> std::vector<AST::pStmt> {
+    std::vector<AST::pStmt> statements;
     try {
-        return expression();
+        while (!isAtEnd())
+            statements.push_back(statement());
     } catch (ParseErr &err) {
         Errors::hadError = true;
         logger::error(err);
-        return AST::pExpr{};
     }
+    return statements;
+}
+
+auto cpplox::Parser::statement() -> cpplox::AST::pStmt {
+    if (match(TokenType::PRINT))
+        return printStatement();
+    return expressionStatement();
+}
+
+auto cpplox::Parser::printStatement() -> cpplox::AST::pStmt {
+    AST::pExpr value = expression();
+    consumeOrError(TokenType::SEMICOLON, "Expect ';' after value.");
+    return std::make_unique<AST::PrintStmt>(std::move(value));
+}
+
+auto cpplox::Parser::expressionStatement() -> cpplox::AST::pStmt {
+    AST::pExpr expr = expression();
+    consumeOrError(TokenType::SEMICOLON, "Expect ';' after expression.");
+    return std::make_unique<AST::ExpressionStmt>(std::move(expr));
 }
 
 // expression -> equality

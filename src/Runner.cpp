@@ -66,15 +66,15 @@ int cpplox::Runner::runREPL() {
 void cpplox::Runner::run(const std::string &source) {
     Scanner scanner(source);
     const std::vector<Token> tokens = scanner.scanTokens();
-    // For now, just print the tokens.
-    for (const Token &token: tokens) {
-        std::cout << token << std::endl;
-    }
+//    // For now, just print the tokens.
+//    for (const Token &token: tokens) {
+//        std::cout << token << std::endl;
+//    }
 
     Parser parser(tokens);
-    const auto expression = parser.parse();
+    const auto statements = parser.parse();
     // Stop if there was a syntax error.
     if (Errors::hadError)
         return;
-    interpreter.interpret(expression);
+    interpreter.interpret(statements);
 }

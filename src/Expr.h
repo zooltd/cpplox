@@ -3,8 +3,8 @@
 
 #include "Object.h"
 #include "Token.h"
-#include <any>
 #include <memory>
+#include <variant>
 
 namespace cpplox::AST {
 

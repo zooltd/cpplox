@@ -59,7 +59,7 @@ namespace cpplox {
         void addToken(TokenType type, const Object &literal);
         auto parseStr() -> std::optional<std::string>;
         auto parseNum() -> std::optional<double>;
-        auto parseIdentifier() -> std::optional<TokenType>;
+        auto parseKeywords() -> std::optional<TokenType>;
     };
 
 }// namespace cpplox

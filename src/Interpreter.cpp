@@ -2,14 +2,26 @@
 #include "Meta.h"
 #include <iostream>
 
-void cpplox::Interpreter::interpret(const AST::pExpr &pExpr) {
+void cpplox::Interpreter::interpret(const std::vector<AST::pStmt> &statements) {
     try {
-        const Object value = evaluate(pExpr);
-        std::cout << value << std::endl;
+        for (const AST::pStmt &pStmt: statements)
+            execute(pStmt);
     } catch (const InterpretErr &error) {
         Errors::hadRuntimeError = true;
         logger::error(error);
     }
+}
+
+void cpplox::Interpreter::execute(const AST::pStmt &pStmt) {
+    return std::visit(
+            [this](auto &&pStmt) {
+                using T = std::decay_t<decltype(pStmt)>;
+                if constexpr (std::is_same_v<T, AST::pExpressionStmt>)
+                    return evalExpressionStmt(pStmt);
+                if constexpr (std::is_same_v<T, AST::pPrintStmt>)
+                    return evalPrintStmt(pStmt);
+            },
+            pStmt);
 }
 
 cpplox::Object cpplox::Interpreter::evaluate(const AST::pExpr &pExpr) {
@@ -30,18 +42,24 @@ cpplox::Object cpplox::Interpreter::evaluate(const AST::pExpr &pExpr) {
             pExpr);
 }
 
-cpplox::Object
-cpplox::Interpreter::evalLiteralExpr(const AST::pLiteralExpr &pExpr) {
+void cpplox::Interpreter::evalExpressionStmt(const cpplox::AST::pExpressionStmt &pStmt) {
+    evaluate(pStmt->expression);
+}
+
+void cpplox::Interpreter::evalPrintStmt(const cpplox::AST::pPrintStmt &pStmt) {
+    Object value = evaluate(pStmt->expression);
+    std::cout << value << std::endl;
+}
+
+cpplox::Object cpplox::Interpreter::evalLiteralExpr(const AST::pLiteralExpr &pExpr) {
     return pExpr->value;
 }
 
-cpplox::Object
-cpplox::Interpreter::evalGroupingExpr(const AST::pGroupingExpr &pExpr) {
+cpplox::Object cpplox::Interpreter::evalGroupingExpr(const AST::pGroupingExpr &pExpr) {
     return evaluate(pExpr->expression);
 }
 
-cpplox::Object
-cpplox::Interpreter::evalUnaryExpr(const AST::pUnaryExpr &pExpr) {
+cpplox::Object cpplox::Interpreter::evalUnaryExpr(const AST::pUnaryExpr &pExpr) {
     const Object right = evaluate(pExpr->right);
     switch (pExpr->op.type) {
         case TokenType::BANG:

@@ -3,6 +3,7 @@
 
 #include "Errors.h"
 #include "Expr.h"
+#include "Stmt.h"
 #include "Token.h"
 #include <memory>
 #include <string>
@@ -16,7 +17,7 @@ namespace cpplox {
     public:
         explicit Parser(std::vector<Token> tokens) : tokens(std::move(tokens)) {}
 
-        auto parse() -> AST::pExpr;
+        auto parse() -> std::vector<AST::pStmt>;
 
     private:
         std::vector<Token> tokens;
@@ -33,6 +34,10 @@ namespace cpplox {
         Token previous();
         Token advance();
         Token consumeOrError(TokenType type, const std::string &message);
+
+        auto statement() -> AST::pStmt;
+        auto printStatement() -> AST::pStmt;
+        auto expressionStatement() -> AST::pStmt;
 
         auto expression() -> AST::pExpr;
         auto equality() -> AST::pExpr;

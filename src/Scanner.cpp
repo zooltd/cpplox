@@ -100,11 +100,12 @@ void cpplox::Scanner::scanToken() {
                 if (auto value = parseNum())
                     addToken(TokenType::NUMBER, *value);
             }
-            // parse identifiers
+            // parse keywords or identifiers
             else if (isAlpha(c)) {
-                if (const auto type = parseIdentifier())
+                if (const auto type = parseKeywords())
                     addToken(*type);
-                addToken(TokenType::IDENTIFIER);
+                else
+                    addToken(TokenType::IDENTIFIER);
             }
             // unknown lexemes
             else
@@ -175,13 +176,13 @@ auto cpplox::Scanner::parseNum() -> std::optional<double> {
     return std::stod(source.substr(start, current - start));
 }
 
-auto cpplox::Scanner::parseIdentifier() -> std::optional<TokenType> {
+auto cpplox::Scanner::parseKeywords() -> std::optional<TokenType> {
     while (isAlphaNumeric(peek()))
         advance();
     const std::string text = source.substr(start, current - start);
-    if (keywords.find(text) == keywords.end()) {
-        return TokenType::IDENTIFIER;
-    }
+    auto type = keywords.find(text);
+    if (type != keywords.end())
+        return (*type).second;
     return std::nullopt;
 }
 

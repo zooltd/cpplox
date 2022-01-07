@@ -17,8 +17,10 @@ namespace cpplox {
 
     template<typename T, typename... Ts>
     std::ostream &operator<<(std::ostream &os, const std::variant<T, Ts...> &v) {
-        std::visit(overloaded{[&os](std::monostate) { os << "null"; },
-                              [&os](auto &&arg) { os << arg; }},
+        std::visit(overloaded{
+                           [&os](std::monostate) { os << "NULL"; },
+                           [&os](bool arg) { os << (arg ? "TRUE" : "FALSE"); },
+                           [&os](auto &&arg) { os << arg; }},
                    v);
         return os;
     }
