@@ -5,7 +5,6 @@
 #include "Expr.h"
 #include "Stmt.h"
 #include "Token.h"
-#include <memory>
 #include <string>
 #include <vector>
 
@@ -41,6 +40,7 @@ namespace cpplox {
         auto printStatement() -> AST::pStmt;
         auto expressionStatement() -> AST::pStmt;
 
+        auto assignment() -> AST::pExpr;
         auto expression() -> AST::pExpr;
         auto equality() -> AST::pExpr;
         auto comparison() -> AST::pExpr;

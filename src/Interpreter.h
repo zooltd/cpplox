@@ -27,6 +27,7 @@ namespace cpplox {
         void evalExpressionStmt(const AST::pExpressionStmt &pStmt);
         void evalPrintStmt(const AST::pPrintStmt &pStmt);
 
+        Object evalAssignExpr(const AST::pAssignExpr &pExpr);
         Object evalBinaryExpr(const AST::pBinaryExpr &pExpr);
         Object evalGroupingExpr(const AST::pGroupingExpr &pExpr);
         Object evalLiteralExpr(const AST::pLiteralExpr &pExpr);

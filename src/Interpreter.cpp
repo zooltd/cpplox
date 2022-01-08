@@ -3,10 +3,7 @@
 #include <iostream>
 
 void cpplox::Interpreter::interpret(const std::vector<AST::pStmt> &statements) {
-    try {
-        for (const AST::pStmt &pStmt: statements)
-            execute(pStmt);
-    } catch (const InterpretErr &error) {
+    try { for (const AST::pStmt &pStmt: statements) execute(pStmt); } catch (const InterpretErr &error) {
         Errors::hadRuntimeError = true;
         logger::error(error);
     }
@@ -16,58 +13,50 @@ void cpplox::Interpreter::execute(const AST::pStmt &pStmt) {
     return std::visit(
             [this](auto &&pStmt) -> void {
                 using T = std::decay_t<decltype(pStmt)>;
-                if constexpr (std::is_same_v<T, AST::pVarStmt>)
-                    return evalVarStmt(pStmt);
-                if constexpr (std::is_same_v<T, AST::pExpressionStmt>)
-                    return evalExpressionStmt(pStmt);
-                if constexpr (std::is_same_v<T, AST::pPrintStmt>)
-                    return evalPrintStmt(pStmt);
+                if constexpr (std::is_same_v<T, AST::pVarStmt>) return evalVarStmt(pStmt);
+                if constexpr (std::is_same_v<T, AST::pExpressionStmt>) return evalExpressionStmt(pStmt);
+                if constexpr (std::is_same_v<T, AST::pPrintStmt>) return evalPrintStmt(pStmt);
             },
             pStmt);
 }
 
-void cpplox::Interpreter::evalVarStmt(const cpplox::AST::pVarStmt &pStmt) {
+void cpplox::Interpreter::evalVarStmt(const AST::pVarStmt &pStmt) {
     Object value = std::monostate{};
-    if (!std::holds_alternative<std::nullptr_t>(pStmt->initializer))
-        value = evaluate(pStmt->initializer);
+    if (!std::holds_alternative<std::nullptr_t>(pStmt->initializer)) value = evaluate(pStmt->initializer);
     environment.define((pStmt->name).lexeme, value);
 }
 
 cpplox::Object cpplox::Interpreter::evaluate(const AST::pExpr &pExpr) {
     return std::visit(
-            [this](auto &&pExpr) -> cpplox::Object {
+            [this](auto &&pExpr) -> Object {
                 using T = std::decay_t<decltype(pExpr)>;
-                if constexpr (std::is_same_v<T, AST::pLiteralExpr>)
-                    return evalLiteralExpr(pExpr);
-                if constexpr (std::is_same_v<T, AST::pGroupingExpr>)
-                    return evalGroupingExpr(pExpr);
-                if constexpr (std::is_same_v<T, AST::pUnaryExpr>)
-                    return evalUnaryExpr(pExpr);
-                if constexpr (std::is_same_v<T, AST::pBinaryExpr>)
-                    return evalBinaryExpr(pExpr);
-                if constexpr (std::is_same_v<T, AST::pVariableExpr>)
-                    return evalVariableExpr(pExpr);
+                if constexpr (std::is_same_v<T, AST::pAssignExpr>) return evalAssignExpr(pExpr);
+                if constexpr (std::is_same_v<T, AST::pLiteralExpr>) return evalLiteralExpr(pExpr);
+                if constexpr (std::is_same_v<T, AST::pGroupingExpr>) return evalGroupingExpr(pExpr);
+                if constexpr (std::is_same_v<T, AST::pUnaryExpr>) return evalUnaryExpr(pExpr);
+                if constexpr (std::is_same_v<T, AST::pBinaryExpr>) return evalBinaryExpr(pExpr);
+                if constexpr (std::is_same_v<T, AST::pVariableExpr>) return evalVariableExpr(pExpr);
                 return std::monostate{};
             },
             pExpr);
 }
 
-void cpplox::Interpreter::evalExpressionStmt(const cpplox::AST::pExpressionStmt &pStmt) {
-    evaluate(pStmt->expression);
-}
+void cpplox::Interpreter::evalExpressionStmt(const AST::pExpressionStmt &pStmt) { evaluate(pStmt->expression); }
 
-void cpplox::Interpreter::evalPrintStmt(const cpplox::AST::pPrintStmt &pStmt) {
+void cpplox::Interpreter::evalPrintStmt(const AST::pPrintStmt &pStmt) {
     Object value = evaluate(pStmt->expression);
     std::cout << value << std::endl;
 }
 
-cpplox::Object cpplox::Interpreter::evalLiteralExpr(const AST::pLiteralExpr &pExpr) {
-    return pExpr->value;
+cpplox::Object cpplox::Interpreter::evalAssignExpr(const AST::pAssignExpr &pExpr) {
+    Object value = evaluate(pExpr->value);
+    environment.assign(pExpr->name, value);
+    return value;
 }
 
-cpplox::Object cpplox::Interpreter::evalGroupingExpr(const AST::pGroupingExpr &pExpr) {
-    return evaluate(pExpr->expression);
-}
+cpplox::Object cpplox::Interpreter::evalLiteralExpr(const AST::pLiteralExpr &pExpr) { return pExpr->value; }
+
+cpplox::Object cpplox::Interpreter::evalGroupingExpr(const AST::pGroupingExpr &pExpr) { return evaluate(pExpr->expression); }
 
 cpplox::Object cpplox::Interpreter::evalUnaryExpr(const AST::pUnaryExpr &pExpr) {
     const Object right = evaluate(pExpr->right);
@@ -128,29 +117,20 @@ cpplox::Object cpplox::Interpreter::evalBinaryExpr(const AST::pBinaryExpr &pExpr
     }
 }
 
-cpplox::Object cpplox::Interpreter::evalVariableExpr(const cpplox::AST::pVariableExpr &pExpr) {
-    return environment.get(pExpr->name);
-}
+cpplox::Object cpplox::Interpreter::evalVariableExpr(const cpplox::AST::pVariableExpr &pExpr) { return environment.get(pExpr->name); }
 
 bool cpplox::Interpreter::isTruthy(const Object &obj) const {
-    if (std::holds_alternative<std::monostate>(obj))
-        return false;
-    if (std::holds_alternative<bool>(obj)) {
-        return std::get<bool>(obj);
-    }
+    if (std::holds_alternative<std::monostate>(obj)) return false;
+    if (std::holds_alternative<bool>(obj)) { return std::get<bool>(obj); }
     return true;
 }
 
-void cpplox::Interpreter::checkNumberOperand(const Token &op,
-                                             const Object &operand) {
-    if (std::holds_alternative<double>(operand))
-        return;
+void cpplox::Interpreter::checkNumberOperand(const Token &op, const Object &operand) {
+    if (std::holds_alternative<double>(operand)) return;
     throw InterpretErr(Meta::sourceFile, op.line, "Operand must be a number.");
 }
 
-void cpplox::Interpreter::checkNumberOperands(const Token &op,
-                                              const Object &left,
-                                              const Object &right) {
+void cpplox::Interpreter::checkNumberOperands(const Token &op, const Object &left, const Object &right) {
     if (std::holds_alternative<double>(left) &&
         std::holds_alternative<double>(right))
         return;

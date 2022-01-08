@@ -13,3 +13,12 @@ cpplox::Object cpplox::Environment::get(const cpplox::Token &name) {
         return (*iter).second;
     throw VarAccessErr(Meta::sourceFile, name.line, "Undefined variable '" + name.lexeme + "'.");
 }
+
+void cpplox::Environment::assign(Token name, Object value) {
+    auto iter = values.find(name.lexeme);
+    if (iter != values.end()) {
+        values[name.lexeme] = value;
+        return;
+    }
+    throw VarAccessErr(Meta::sourceFile, name.line, "Undefined variable '" + name.lexeme + "'.");
+}

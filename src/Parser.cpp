@@ -5,16 +5,14 @@
 // program -> declaration* EOF
 auto cpplox::Parser::parse() -> std::vector<AST::pStmt> {
     std::vector<AST::pStmt> statements;
-    while (!isAtEnd())
-        statements.push_back(declaration());
+    while (!isAtEnd()) statements.push_back(declaration());
     return statements;
 }
 
 // declaration -> varDecl | statement
-auto cpplox::Parser::declaration() -> cpplox::AST::pStmt {
+auto cpplox::Parser::declaration() -> AST::pStmt {
     try {
-        if (match(TokenType::VAR))
-            return varDeclaration();
+        if (match(TokenType::VAR)) return varDeclaration();
         return statement();
     } catch (const ParseErr &err) {
         Errors::hadError = true;
@@ -25,38 +23,55 @@ auto cpplox::Parser::declaration() -> cpplox::AST::pStmt {
 }
 
 // varDecl -> "var" IDENTIFIER ( "=" expression )? ";"
-auto cpplox::Parser::varDeclaration() -> cpplox::AST::pStmt {
+auto cpplox::Parser::varDeclaration() -> AST::pStmt {
     Token name = consumeOrError(TokenType::IDENTIFIER, "Expect variable name.");
     AST::pExpr initializer = nullptr;
-    if (match(TokenType::EQUAL))
-        initializer = expression();
+    if (match(TokenType::EQUAL)) initializer = expression();
     consumeOrError(TokenType::SEMICOLON, "Expect ';' after variable declaration.");
     return std::make_unique<AST::VarStmt>(std::move(name), std::move(initializer));
 }
 
 // statement -> exprStmt | printStmt
-auto cpplox::Parser::statement() -> cpplox::AST::pStmt {
-    if (match(TokenType::PRINT))
-        return printStatement();
+auto cpplox::Parser::statement() -> AST::pStmt {
+    if (match(TokenType::PRINT)) return printStatement();
     return expressionStatement();
 }
 
 // printStmt -> "print" expression ";"
-auto cpplox::Parser::printStatement() -> cpplox::AST::pStmt {
+auto cpplox::Parser::printStatement() -> AST::pStmt {
     AST::pExpr value = expression();
     consumeOrError(TokenType::SEMICOLON, "Expect ';' after value.");
     return std::make_unique<AST::PrintStmt>(std::move(value));
 }
 
 // exprStmt -> expression ";"
-auto cpplox::Parser::expressionStatement() -> cpplox::AST::pStmt {
+auto cpplox::Parser::expressionStatement() -> AST::pStmt {
     AST::pExpr expr = expression();
     consumeOrError(TokenType::SEMICOLON, "Expect ';' after expression.");
     return std::make_unique<AST::ExpressionStmt>(std::move(expr));
 }
 
-// expression -> equality
-auto cpplox::Parser::expression() -> AST::pExpr { return equality(); }
+// expression -> assignment
+auto cpplox::Parser::expression() -> AST::pExpr { return assignment(); }
+
+// assignment -> IDENTIFIER "=" assignment | equality
+auto cpplox::Parser::assignment() -> AST::pExpr {
+    AST::pExpr expr = equality();
+
+    if (match(TokenType::EQUAL)) {
+        Token equals = previous();
+        AST::pExpr value = assignment();
+
+        if (std::holds_alternative<AST::pVariableExpr>(expr)) {
+            Token name = std::get<AST::pVariableExpr>(expr)->name;
+            return std::make_unique<AST::AssignExpr>(std::move(name), std::move(value));
+        }
+
+        error(equals, "Invalid assignment target.");
+    }
+
+    return expr;
+}
 
 // equality -> comparison ( ( "!=" | "==" ) comparison )*
 auto cpplox::Parser::equality() -> AST::pExpr {
@@ -115,16 +130,11 @@ auto cpplox::Parser::unary() -> AST::pExpr {
 
 // primary -> NUMBER | STRING | "true" | "false" | "nil" | "(" expression ")" | IDENTIFIER
 auto cpplox::Parser::primary() -> AST::pExpr {
-    if (match(TokenType::FALSE_TOKEN))
-        return std::make_unique<AST::LiteralExpr>(false);
-    if (match(TokenType::TRUE_TOKEN))
-        return std::make_unique<AST::LiteralExpr>(true);
-    if (match(TokenType::NIL))
-        return std::make_unique<AST::LiteralExpr>(nullptr);
-    if (match(TokenType::NUMBER, TokenType::STRING))
-        return std::make_unique<AST::LiteralExpr>(previous().literal);
-    if (match(TokenType::IDENTIFIER))
-        return std::make_unique<AST::VariableExpr>(previous());
+    if (match(TokenType::FALSE_TOKEN)) return std::make_unique<AST::LiteralExpr>(false);
+    if (match(TokenType::TRUE_TOKEN)) return std::make_unique<AST::LiteralExpr>(true);
+    if (match(TokenType::NIL)) return std::make_unique<AST::LiteralExpr>(nullptr);
+    if (match(TokenType::NUMBER, TokenType::STRING)) return std::make_unique<AST::LiteralExpr>(previous().literal);
+    if (match(TokenType::IDENTIFIER)) return std::make_unique<AST::VariableExpr>(previous());
     if (match(TokenType::LEFT_PAREN)) {
         AST::pExpr expr = expression();
         consumeOrError(TokenType::RIGHT_PAREN, "Expect ')' after expression.");
@@ -134,20 +144,16 @@ auto cpplox::Parser::primary() -> AST::pExpr {
     throw error(peek(), "Expect expression.");
 }
 
-cpplox::Token cpplox::Parser::consumeOrError(TokenType type,
-                                             const std::string &message) {
-    if (check(type))
-        return advance();
+cpplox::Token cpplox::Parser::consumeOrError(TokenType type, const std::string &message) {
+    if (check(type)) return advance();
     throw error(peek(), message);
 }
 
 auto cpplox::Parser::error(const Token &token, const std::string &msg) const
-        -> ParseErr {
+-> ParseErr {
     std::string error = msg;
-    if (token.type == TokenType::EOF_TOKEN)
-        error = " at end: " + error;
-    else
-        error = " at '" + token.lexeme + "': " + error;
+    if (token.type == TokenType::EOF_TOKEN) error = " at end: " + error;
+    else error = " at '" + token.lexeme + "': " + error;
     return ParseErr{Meta::sourceFile, token.line, error};
 }
 
@@ -155,8 +161,7 @@ void cpplox::Parser::synchronize() {
     advance();
     // It discard tokens until it thinks it has found a statement boundary.
     while (!isAtEnd()) {
-        if (previous().type == TokenType::SEMICOLON)
-            return;
+        if (previous().type == TokenType::SEMICOLON) return;
         switch (peek().type) {
             case TokenType::CLASS:
             case TokenType::FUN:
@@ -176,7 +181,7 @@ void cpplox::Parser::synchronize() {
 //  If so, it consumes the token and returns true.
 //  Otherwise, it returns false and leaves the current token alone.
 template<class... T>
-bool cpplox::Parser::match(T... types) {
+bool cpplox::Parser::match(T ... types) {
     if ((check(types) || ...)) {
         advance();
         return true;
@@ -185,15 +190,12 @@ bool cpplox::Parser::match(T... types) {
 }
 
 bool cpplox::Parser::check(TokenType type) {
-    if (isAtEnd())
-        return false;
+    if (isAtEnd()) return false;
     return peek().type == type;
 }
 
 cpplox::Token cpplox::Parser::advance() {
-    if (!isAtEnd()) {
-        ++current;
-    }
+    if (!isAtEnd()) { ++current; }
     return previous();
 }
 
