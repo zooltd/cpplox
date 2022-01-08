@@ -14,8 +14,10 @@ void cpplox::Interpreter::interpret(const std::vector<AST::pStmt> &statements) {
 
 void cpplox::Interpreter::execute(const AST::pStmt &pStmt) {
     return std::visit(
-            [this](auto &&pStmt) {
+            [this](auto &&pStmt) -> void {
                 using T = std::decay_t<decltype(pStmt)>;
+                if constexpr (std::is_same_v<T, AST::pVarStmt>)
+                    return evalVarStmt(pStmt);
                 if constexpr (std::is_same_v<T, AST::pExpressionStmt>)
                     return evalExpressionStmt(pStmt);
                 if constexpr (std::is_same_v<T, AST::pPrintStmt>)
@@ -24,20 +26,26 @@ void cpplox::Interpreter::execute(const AST::pStmt &pStmt) {
             pStmt);
 }
 
+//TODO
+void cpplox::Interpreter::evalVarStmt(const cpplox::AST::pVarStmt &pStmt) {
+    return;
+}
+
 cpplox::Object cpplox::Interpreter::evaluate(const AST::pExpr &pExpr) {
     return std::visit(
-            [this](auto &&pExpr) {
+            [this](auto &&pExpr) -> cpplox::Object {
                 using T = std::decay_t<decltype(pExpr)>;
                 if constexpr (std::is_same_v<T, AST::pLiteralExpr>)
                     return evalLiteralExpr(pExpr);
-                else if constexpr (std::is_same_v<T, AST::pGroupingExpr>)
+                if constexpr (std::is_same_v<T, AST::pGroupingExpr>)
                     return evalGroupingExpr(pExpr);
-                else if constexpr (std::is_same_v<T, AST::pUnaryExpr>)
+                if constexpr (std::is_same_v<T, AST::pUnaryExpr>)
                     return evalUnaryExpr(pExpr);
-                else if constexpr (std::is_same_v<T, AST::pBinaryExpr>)
+                if constexpr (std::is_same_v<T, AST::pBinaryExpr>)
                     return evalBinaryExpr(pExpr);
-                else
-                    return std::monostate{};
+                if constexpr (std::is_same_v<T, AST::pVariableExpr>)
+                    return evalVariableExpr(pExpr);
+                return std::monostate{};
             },
             pExpr);
 }
@@ -116,6 +124,12 @@ cpplox::Object cpplox::Interpreter::evalBinaryExpr(const AST::pBinaryExpr &pExpr
         default:
             return std::monostate{};
     }
+}
+
+//TODO
+cpplox::Object cpplox::Interpreter::evalVariableExpr(const cpplox::AST::pVariableExpr &pExpr) {
+    Object value;
+    return value;
 }
 
 bool cpplox::Interpreter::isTruthy(const Object &obj) const {

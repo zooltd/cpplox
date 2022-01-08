@@ -20,6 +20,7 @@ namespace cpplox {
         void execute(const AST::pStmt &pStmt);
 
     private:
+        void evalVarStmt(const AST::pVarStmt &pStmt);
         void evalExpressionStmt(const AST::pExpressionStmt &pStmt);
         void evalPrintStmt(const AST::pPrintStmt &pStmt);
 
@@ -27,6 +28,7 @@ namespace cpplox {
         Object evalGroupingExpr(const AST::pGroupingExpr &pExpr);
         Object evalLiteralExpr(const AST::pLiteralExpr &pExpr);
         Object evalUnaryExpr(const AST::pUnaryExpr &pExpr);
+        Object evalVariableExpr(const AST::pVariableExpr &pExpr);
 
         bool isTruthy(const Object &obj) const;
         void checkNumberOperand(const Token &op, const Object &operand);

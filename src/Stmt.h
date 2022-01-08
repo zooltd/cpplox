@@ -9,11 +9,13 @@ namespace cpplox::AST {
 
     class ExpressionStmt;
     class PrintStmt;
+    class VarStmt;
 
     using pExpressionStmt = std::unique_ptr<ExpressionStmt>;
     using pPrintStmt = std::unique_ptr<PrintStmt>;
+    using pVarStmt = std::unique_ptr<VarStmt>;
 
-    using pStmt = std::variant<pExpressionStmt, pPrintStmt>;
+    using pStmt = std::variant<std::nullptr_t, pExpressionStmt, pPrintStmt, pVarStmt>;
 
     class ExpressionStmt {
     public:
@@ -25,6 +27,13 @@ namespace cpplox::AST {
     public:
         const pExpr expression;
         explicit PrintStmt(pExpr expression);
+    };
+
+    class VarStmt {
+    public:
+        const Token name;
+        const pExpr initializer;
+        VarStmt(Token name, pExpr initializer);
     };
 
 }// namespace cpplox::AST

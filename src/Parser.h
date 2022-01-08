@@ -35,6 +35,8 @@ namespace cpplox {
         Token advance();
         Token consumeOrError(TokenType type, const std::string &message);
 
+        auto declaration() -> AST::pStmt;
+        auto varDeclaration() -> AST::pStmt;
         auto statement() -> AST::pStmt;
         auto printStatement() -> AST::pStmt;
         auto expressionStatement() -> AST::pStmt;

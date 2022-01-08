@@ -10,3 +10,6 @@ cpplox::AST::LiteralExpr::LiteralExpr(Object value) : value(std::move(value)) {}
 
 cpplox::AST::GroupingExpr::GroupingExpr(pExpr expression)
     : expression(std::move(expression)) {}
+
+cpplox::AST::VariableExpr::VariableExpr(cpplox::Token name)
+    : name(std::move(name)) {}

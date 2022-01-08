@@ -2,30 +2,53 @@
 #include "Logger.h"
 #include "Meta.h"
 
+// program -> declaration* EOF
 auto cpplox::Parser::parse() -> std::vector<AST::pStmt> {
     std::vector<AST::pStmt> statements;
-    try {
-        while (!isAtEnd())
-            statements.push_back(statement());
-    } catch (ParseErr &err) {
-        Errors::hadError = true;
-        logger::error(err);
-    }
+    while (!isAtEnd())
+        statements.push_back(declaration());
     return statements;
 }
 
+// declaration -> varDecl | statement
+auto cpplox::Parser::declaration() -> cpplox::AST::pStmt {
+    try {
+        if (match(TokenType::VAR))
+            return varDeclaration();
+        return statement();
+    } catch (const ParseErr &err) {
+        Errors::hadError = true;
+        logger::error(err);
+        synchronize();
+        return nullptr;
+    }
+}
+
+// varDecl -> "var" IDENTIFIER ( "=" expression )? ";"
+auto cpplox::Parser::varDeclaration() -> cpplox::AST::pStmt {
+    Token name = consumeOrError(TokenType::IDENTIFIER, "Expect variable name.");
+    AST::pExpr initializer = nullptr;
+    if (match(TokenType::EQUAL))
+        initializer = expression();
+    consumeOrError(TokenType::SEMICOLON, "Expect ';' after variable declaration.");
+    return std::make_unique<AST::VarStmt>(std::move(name), std::move(initializer));
+}
+
+// statement -> exprStmt | printStmt
 auto cpplox::Parser::statement() -> cpplox::AST::pStmt {
     if (match(TokenType::PRINT))
         return printStatement();
     return expressionStatement();
 }
 
+// printStmt -> "print" expression ";"
 auto cpplox::Parser::printStatement() -> cpplox::AST::pStmt {
     AST::pExpr value = expression();
     consumeOrError(TokenType::SEMICOLON, "Expect ';' after value.");
     return std::make_unique<AST::PrintStmt>(std::move(value));
 }
 
+// exprStmt -> expression ";"
 auto cpplox::Parser::expressionStatement() -> cpplox::AST::pStmt {
     AST::pExpr expr = expression();
     consumeOrError(TokenType::SEMICOLON, "Expect ';' after expression.");
@@ -90,7 +113,7 @@ auto cpplox::Parser::unary() -> AST::pExpr {
     return primary();
 }
 
-// primary -> NUMBER | STRING | "true" | "false" | "nil" | "(" expression ")"
+// primary -> NUMBER | STRING | "true" | "false" | "nil" | "(" expression ")" | IDENTIFIER
 auto cpplox::Parser::primary() -> AST::pExpr {
     if (match(TokenType::FALSE_TOKEN))
         return std::make_unique<AST::LiteralExpr>(false);
@@ -98,9 +121,10 @@ auto cpplox::Parser::primary() -> AST::pExpr {
         return std::make_unique<AST::LiteralExpr>(true);
     if (match(TokenType::NIL))
         return std::make_unique<AST::LiteralExpr>(nullptr);
-    if (match(TokenType::NUMBER, TokenType::STRING)) {
+    if (match(TokenType::NUMBER, TokenType::STRING))
         return std::make_unique<AST::LiteralExpr>(previous().literal);
-    }
+    if (match(TokenType::IDENTIFIER))
+        return std::make_unique<AST::VariableExpr>(previous());
     if (match(TokenType::LEFT_PAREN)) {
         AST::pExpr expr = expression();
         consumeOrError(TokenType::RIGHT_PAREN, "Expect ')' after expression.");

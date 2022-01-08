@@ -12,14 +12,15 @@ namespace cpplox::AST {
     class GroupingExpr;
     class LiteralExpr;
     class UnaryExpr;
+    class VariableExpr;
 
     using pBinaryExpr = std::unique_ptr<BinaryExpr>;
     using pGroupingExpr = std::unique_ptr<GroupingExpr>;
     using pLiteralExpr = std::unique_ptr<LiteralExpr>;
     using pUnaryExpr = std::unique_ptr<UnaryExpr>;
+    using pVariableExpr = std::unique_ptr<VariableExpr>;
 
-    using pExpr =
-            std::variant<pBinaryExpr, pGroupingExpr, pLiteralExpr, pUnaryExpr>;
+    using pExpr = std::variant<std::nullptr_t, pBinaryExpr, pGroupingExpr, pLiteralExpr, pUnaryExpr, pVariableExpr>;
 
     class BinaryExpr {
     public:
@@ -46,6 +47,12 @@ namespace cpplox::AST {
     public:
         const pExpr expression;
         explicit GroupingExpr(pExpr expression);
+    };
+
+    class VariableExpr {
+    public:
+        const Token name;
+        explicit VariableExpr(Token name);
     };
 
 }// namespace cpplox::AST
