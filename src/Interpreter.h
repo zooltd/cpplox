@@ -6,12 +6,13 @@
 #include "Logger.h"
 #include "Object.h"
 #include "Stmt.h"
+#include "Environment.h"
 #include <memory>
 #include <string>
 #include <vector>
 
 namespace cpplox {
-    using InterpretErr = Errors::RuntimeError;
+    using InterpretErr = Errors::Err;
 
     class Interpreter {
     public:
@@ -20,6 +21,8 @@ namespace cpplox {
         void execute(const AST::pStmt &pStmt);
 
     private:
+        Environment environment;
+
         void evalVarStmt(const AST::pVarStmt &pStmt);
         void evalExpressionStmt(const AST::pExpressionStmt &pStmt);
         void evalPrintStmt(const AST::pPrintStmt &pStmt);

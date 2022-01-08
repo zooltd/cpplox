@@ -11,7 +11,7 @@
 
 namespace cpplox {
 
-    using TokenizationErr = Errors::RuntimeError;
+    using TokenizationErr = Errors::Err;
 
     static const std::unordered_map<std::string, TokenType> keywords = {
             {"and", TokenType::AND},

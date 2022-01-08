@@ -5,6 +5,7 @@ add_library(${PROJECT_NAME}.lib)
 
 target_sources(${PROJECT_NAME}.lib
         PRIVATE
+        Environment.cpp
         Expr.cpp
         Interpreter.cpp
         Parser.cpp
@@ -13,6 +14,7 @@ target_sources(${PROJECT_NAME}.lib
         Stmt.cpp
 
         PUBLIC
+        Environment.h
         Errors.h
         Expr.h
         Interpreter.h

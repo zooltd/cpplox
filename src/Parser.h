@@ -11,7 +11,7 @@
 
 namespace cpplox {
 
-    using ParseErr = Errors::RuntimeError;
+    using ParseErr = Errors::Err;
 
     class Parser {
     public:

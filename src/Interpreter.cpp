@@ -26,9 +26,11 @@ void cpplox::Interpreter::execute(const AST::pStmt &pStmt) {
             pStmt);
 }
 
-//TODO
 void cpplox::Interpreter::evalVarStmt(const cpplox::AST::pVarStmt &pStmt) {
-    return;
+    Object value = std::monostate{};
+    if (!std::holds_alternative<std::nullptr_t>(pStmt->initializer))
+        value = evaluate(pStmt->initializer);
+    environment.define((pStmt->name).lexeme, value);
 }
 
 cpplox::Object cpplox::Interpreter::evaluate(const AST::pExpr &pExpr) {
@@ -126,10 +128,8 @@ cpplox::Object cpplox::Interpreter::evalBinaryExpr(const AST::pBinaryExpr &pExpr
     }
 }
 
-//TODO
 cpplox::Object cpplox::Interpreter::evalVariableExpr(const cpplox::AST::pVariableExpr &pExpr) {
-    Object value;
-    return value;
+    return environment.get(pExpr->name);
 }
 
 bool cpplox::Interpreter::isTruthy(const Object &obj) const {
