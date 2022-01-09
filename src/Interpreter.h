@@ -16,13 +16,15 @@ namespace cpplox {
 
     class Interpreter {
     public:
+        Interpreter();
         void interpret(const std::vector<AST::pStmt> &statements);
         Object evaluate(const AST::pExpr &pExpr);
         void execute(const AST::pStmt &pStmt);
 
     private:
-        Environment environment;
+        pEnv environment;
 
+        void evalBlockStmt(const AST::pBlockStmt &pStmt, pEnv blockEnv);
         void evalVarStmt(const AST::pVarStmt &pStmt);
         void evalExpressionStmt(const AST::pExpressionStmt &pStmt);
         void evalPrintStmt(const AST::pPrintStmt &pStmt);
@@ -36,8 +38,7 @@ namespace cpplox {
 
         bool isTruthy(const Object &obj) const;
         void checkNumberOperand(const Token &op, const Object &operand);
-        void checkNumberOperands(const Token &op, const Object &left,
-                                 const Object &right);
+        void checkNumberOperands(const Token &op, const Object &left, const Object &right);
     };
 
 }// namespace cpplox

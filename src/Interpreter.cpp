@@ -1,6 +1,10 @@
 #include "Interpreter.h"
 #include "Meta.h"
 #include <iostream>
+#include <utility>
+
+cpplox::Interpreter::Interpreter()
+    : environment(new Environment()) {}
 
 void cpplox::Interpreter::interpret(const std::vector<AST::pStmt> &statements) {
     try { for (const AST::pStmt &pStmt: statements) execute(pStmt); } catch (const InterpretErr &error) {
@@ -13,6 +17,7 @@ void cpplox::Interpreter::execute(const AST::pStmt &pStmt) {
     return std::visit(
             [this](auto &&pStmt) -> void {
                 using T = std::decay_t<decltype(pStmt)>;
+                if constexpr (std::is_same_v<T, AST::pBlockStmt>) return evalBlockStmt(pStmt, std::make_shared<Environment>(environment));
                 if constexpr (std::is_same_v<T, AST::pVarStmt>) return evalVarStmt(pStmt);
                 if constexpr (std::is_same_v<T, AST::pExpressionStmt>) return evalExpressionStmt(pStmt);
                 if constexpr (std::is_same_v<T, AST::pPrintStmt>) return evalPrintStmt(pStmt);
@@ -20,10 +25,22 @@ void cpplox::Interpreter::execute(const AST::pStmt &pStmt) {
             pStmt);
 }
 
+void cpplox::Interpreter::evalBlockStmt(const AST::pBlockStmt &pStmt, pEnv blockEnv) {
+    const pEnv previous = this->environment;
+    try {
+        this->environment = std::move(blockEnv);
+        for (const AST::pStmt &statement: pStmt->statements) { execute(statement); }
+    } catch (...) {
+        this->environment = previous;
+        // throw;
+    }
+    this->environment = previous;
+}
+
 void cpplox::Interpreter::evalVarStmt(const AST::pVarStmt &pStmt) {
     Object value = std::monostate{};
     if (!std::holds_alternative<std::nullptr_t>(pStmt->initializer)) value = evaluate(pStmt->initializer);
-    environment.define((pStmt->name).lexeme, value);
+    environment->define((pStmt->name).lexeme, value);
 }
 
 cpplox::Object cpplox::Interpreter::evaluate(const AST::pExpr &pExpr) {
@@ -50,7 +67,7 @@ void cpplox::Interpreter::evalPrintStmt(const AST::pPrintStmt &pStmt) {
 
 cpplox::Object cpplox::Interpreter::evalAssignExpr(const AST::pAssignExpr &pExpr) {
     Object value = evaluate(pExpr->value);
-    environment.assign(pExpr->name, value);
+    environment->assign(pExpr->name, value);
     return value;
 }
 
@@ -117,7 +134,7 @@ cpplox::Object cpplox::Interpreter::evalBinaryExpr(const AST::pBinaryExpr &pExpr
     }
 }
 
-cpplox::Object cpplox::Interpreter::evalVariableExpr(const cpplox::AST::pVariableExpr &pExpr) { return environment.get(pExpr->name); }
+cpplox::Object cpplox::Interpreter::evalVariableExpr(const cpplox::AST::pVariableExpr &pExpr) { return environment->get(pExpr->name); }
 
 bool cpplox::Interpreter::isTruthy(const Object &obj) const {
     if (std::holds_alternative<std::monostate>(obj)) return false;

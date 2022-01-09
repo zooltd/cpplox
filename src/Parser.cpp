@@ -31,9 +31,10 @@ auto cpplox::Parser::varDeclaration() -> AST::pStmt {
     return std::make_unique<AST::VarStmt>(std::move(name), std::move(initializer));
 }
 
-// statement -> exprStmt | printStmt
+// statement -> exprStmt | printStmt | block
 auto cpplox::Parser::statement() -> AST::pStmt {
     if (match(TokenType::PRINT)) return printStatement();
+    if (match(TokenType::LEFT_BRACE)) return blockStatement();
     return expressionStatement();
 }
 
@@ -42,6 +43,14 @@ auto cpplox::Parser::printStatement() -> AST::pStmt {
     AST::pExpr value = expression();
     consumeOrError(TokenType::SEMICOLON, "Expect ';' after value.");
     return std::make_unique<AST::PrintStmt>(std::move(value));
+}
+
+// block -> "{" declaration* "}"
+auto cpplox::Parser::blockStatement() -> AST::pStmt {
+    std::vector<AST::pStmt> statements;
+    while (!check(TokenType::RIGHT_BRACE) && !isAtEnd()) { statements.emplace_back(declaration()); }
+    consumeOrError(TokenType::RIGHT_BRACE, "Expect '}' after block.");
+    return std::make_unique<AST::BlockStmt>(std::move(statements));
 }
 
 // exprStmt -> expression ";"

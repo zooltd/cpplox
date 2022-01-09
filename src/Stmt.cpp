@@ -2,11 +2,14 @@
 
 #include <utility>
 
-cpplox::AST::ExpressionStmt::ExpressionStmt(cpplox::AST::pExpr expression)
+cpplox::AST::BlockStmt::BlockStmt(std::vector<pStmt> statements)
+    : statements(std::move(statements)) {}
+
+cpplox::AST::ExpressionStmt::ExpressionStmt(pExpr expression)
     : expression(std::move(expression)) {}
 
-cpplox::AST::PrintStmt::PrintStmt(cpplox::AST::pExpr expression)
+cpplox::AST::PrintStmt::PrintStmt(pExpr expression)
     : expression(std::move(expression)) {}
 
-cpplox::AST::VarStmt::VarStmt(cpplox::Token name, cpplox::AST::pExpr initializer)
+cpplox::AST::VarStmt::VarStmt(Token name, pExpr initializer)
     : name(std::move(name)), initializer(std::move(initializer)) {}

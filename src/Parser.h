@@ -39,6 +39,7 @@ namespace cpplox {
         auto statement() -> AST::pStmt;
         auto printStatement() -> AST::pStmt;
         auto expressionStatement() -> AST::pStmt;
+        auto blockStatement() -> AST::pStmt;
 
         auto assignment() -> AST::pExpr;
         auto expression() -> AST::pExpr;

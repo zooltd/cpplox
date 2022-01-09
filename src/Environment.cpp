@@ -3,21 +3,27 @@
 #include "Meta.h"
 #include <utility>
 
-void cpplox::Environment::define(const std::string &name, cpplox::Object value) {
-    values[name] = std::move(value);
-}
+cpplox::Environment::Environment()
+    : enclosing(nullptr) {}
+
+cpplox::Environment::Environment(pEnv enclosing)
+    : enclosing(std::move(enclosing)) {}
+
+void cpplox::Environment::define(const std::string &name, cpplox::Object value) { values[name] = std::move(value); }
 
 cpplox::Object cpplox::Environment::get(const cpplox::Token &name) {
-    auto iter = values.find(name.lexeme);
-    if (iter != values.end())
-        return (*iter).second;
+    if (const auto v = values.find(name.lexeme); v != values.end()) return (*v).second;
+    if (enclosing != nullptr) return enclosing->get(name);
     throw VarAccessErr(Meta::sourceFile, name.line, "Undefined variable '" + name.lexeme + "'.");
 }
 
-void cpplox::Environment::assign(Token name, Object value) {
-    auto iter = values.find(name.lexeme);
-    if (iter != values.end()) {
-        values[name.lexeme] = value;
+void cpplox::Environment::assign(const Token &name, Object value) {
+    if (const auto v = values.find(name.lexeme); v != values.end()) {
+        values[name.lexeme] = std::move(value);
+        return;
+    }
+    if (enclosing != nullptr) {
+        enclosing->assign(name, value);
         return;
     }
     throw VarAccessErr(Meta::sourceFile, name.line, "Undefined variable '" + name.lexeme + "'.");
