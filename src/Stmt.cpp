@@ -8,6 +8,9 @@ cpplox::AST::BlockStmt::BlockStmt(std::vector<pStmt> statements)
 cpplox::AST::ExpressionStmt::ExpressionStmt(pExpr expression)
     : expression(std::move(expression)) {}
 
+cpplox::AST::IfStmt::IfStmt(pExpr condition, pStmt thenBranch, pStmt elseBranch)
+    : condition(std::move(condition)), thenBranch(std::move(thenBranch)), elseBranch(std::move(elseBranch)) {}
+
 cpplox::AST::PrintStmt::PrintStmt(pExpr expression)
     : expression(std::move(expression)) {}
 

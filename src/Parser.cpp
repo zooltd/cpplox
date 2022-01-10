@@ -31,11 +31,27 @@ auto cpplox::Parser::varDeclaration() -> AST::pStmt {
     return std::make_unique<AST::VarStmt>(std::move(name), std::move(initializer));
 }
 
-// statement -> exprStmt | printStmt | block
+// statement -> exprStmt | ifStmt | printStmt | whileStmt | block
 auto cpplox::Parser::statement() -> AST::pStmt {
+    if (match(TokenType::IF)) return ifStatement();
     if (match(TokenType::PRINT)) return printStatement();
     if (match(TokenType::LEFT_BRACE)) return blockStatement();
     return expressionStatement();
+}
+
+// ifStmt -> "if" "(" expression ")" statement ( "else" statement )?
+// the else is bound to the nearest if that precedes it
+// to handle the dangling else problem
+auto cpplox::Parser::ifStatement() -> AST::pStmt {
+    consumeOrError(TokenType::LEFT_PAREN, "Expect '(' after 'if'.");
+    AST::pExpr condition = expression();
+    consumeOrError(TokenType::RIGHT_PAREN, "Expect ')' after if condition.");
+
+    AST::pStmt thenBranch = statement();
+    AST::pStmt elseBranch = nullptr;
+    if (match(TokenType::ELSE)) elseBranch = statement();
+    return std::make_unique<AST::IfStmt>(std::move(condition), std::move(thenBranch), std::move(elseBranch));
+
 }
 
 // printStmt -> "print" expression ";"
@@ -63,12 +79,12 @@ auto cpplox::Parser::expressionStatement() -> AST::pStmt {
 // expression -> assignment
 auto cpplox::Parser::expression() -> AST::pExpr { return assignment(); }
 
-// assignment -> IDENTIFIER "=" assignment | equality
+// assignment -> IDENTIFIER "=" assignment | logic_or
 auto cpplox::Parser::assignment() -> AST::pExpr {
-    AST::pExpr expr = equality();
+    AST::pExpr expr = logical_or();
 
     if (match(TokenType::EQUAL)) {
-        Token equals = previous();
+        const Token equals = previous();
         AST::pExpr value = assignment();
 
         if (std::holds_alternative<AST::pVariableExpr>(expr)) {
@@ -77,6 +93,32 @@ auto cpplox::Parser::assignment() -> AST::pExpr {
         }
 
         error(equals, "Invalid assignment target.");
+    }
+
+    return expr;
+}
+
+// logic_or -> logic_and ( "or" logic_and )*
+auto cpplox::Parser::logical_or() -> AST::pExpr {
+    AST::pExpr expr = logical_and();
+
+    while (match(TokenType::OR)) {
+        const Token op = previous();
+        AST::pExpr right = logical_and();
+        expr = std::make_unique<AST::LogicalExpr>(std::move(expr), op, std::move(right));
+    }
+
+    return expr;
+}
+
+// logic_and -> equality ( "and" equality )*
+auto cpplox::Parser::logical_and() -> AST::pExpr {
+    AST::pExpr expr = equality();
+
+    while (match(TokenType::AND)) {
+        const Token op = previous();
+        AST::pExpr right = equality();
+        expr = std::make_unique<AST::LogicalExpr>(std::move(expr), op, std::move(right));
     }
 
     return expr;
@@ -141,7 +183,7 @@ auto cpplox::Parser::unary() -> AST::pExpr {
 auto cpplox::Parser::primary() -> AST::pExpr {
     if (match(TokenType::FALSE_TOKEN)) return std::make_unique<AST::LiteralExpr>(false);
     if (match(TokenType::TRUE_TOKEN)) return std::make_unique<AST::LiteralExpr>(true);
-    if (match(TokenType::NIL)) return std::make_unique<AST::LiteralExpr>(nullptr);
+    if (match(TokenType::NIL)) return std::make_unique<AST::LiteralExpr>(std::monostate{});
     if (match(TokenType::NUMBER, TokenType::STRING)) return std::make_unique<AST::LiteralExpr>(previous().literal);
     if (match(TokenType::IDENTIFIER)) return std::make_unique<AST::VariableExpr>(previous());
     if (match(TokenType::LEFT_PAREN)) {
@@ -189,7 +231,12 @@ void cpplox::Parser::synchronize() {
 //  This checks to see if the current token has any of the given types.
 //  If so, it consumes the token and returns true.
 //  Otherwise, it returns false and leaves the current token alone.
-template<class... T>
+template
+<
+    class
+    ...
+    T>
+
 bool cpplox::Parser::match(T ... types) {
     if ((check(types) || ...)) {
         advance();

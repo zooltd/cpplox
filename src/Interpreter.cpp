@@ -18,9 +18,10 @@ void cpplox::Interpreter::execute(const AST::pStmt &pStmt) {
             [this](auto &&pStmt) -> void {
                 using T = std::decay_t<decltype(pStmt)>;
                 if constexpr (std::is_same_v<T, AST::pBlockStmt>) return evalBlockStmt(pStmt, std::make_shared<Environment>(environment));
-                if constexpr (std::is_same_v<T, AST::pVarStmt>) return evalVarStmt(pStmt);
                 if constexpr (std::is_same_v<T, AST::pExpressionStmt>) return evalExpressionStmt(pStmt);
+                if constexpr (std::is_same_v<T, AST::pIfStmt>) return evalIfStmt(pStmt);
                 if constexpr (std::is_same_v<T, AST::pPrintStmt>) return evalPrintStmt(pStmt);
+                if constexpr (std::is_same_v<T, AST::pVarStmt>) return evalVarStmt(pStmt);
             },
             pStmt);
 }
@@ -48,10 +49,11 @@ cpplox::Object cpplox::Interpreter::evaluate(const AST::pExpr &pExpr) {
             [this](auto &&pExpr) -> Object {
                 using T = std::decay_t<decltype(pExpr)>;
                 if constexpr (std::is_same_v<T, AST::pAssignExpr>) return evalAssignExpr(pExpr);
-                if constexpr (std::is_same_v<T, AST::pLiteralExpr>) return evalLiteralExpr(pExpr);
-                if constexpr (std::is_same_v<T, AST::pGroupingExpr>) return evalGroupingExpr(pExpr);
-                if constexpr (std::is_same_v<T, AST::pUnaryExpr>) return evalUnaryExpr(pExpr);
                 if constexpr (std::is_same_v<T, AST::pBinaryExpr>) return evalBinaryExpr(pExpr);
+                if constexpr (std::is_same_v<T, AST::pGroupingExpr>) return evalGroupingExpr(pExpr);
+                if constexpr (std::is_same_v<T, AST::pLiteralExpr>) return evalLiteralExpr(pExpr);
+                if constexpr (std::is_same_v<T, AST::pLogicalExpr>) return evalLogicalExpr(pExpr);
+                if constexpr (std::is_same_v<T, AST::pUnaryExpr>) return evalUnaryExpr(pExpr);
                 if constexpr (std::is_same_v<T, AST::pVariableExpr>) return evalVariableExpr(pExpr);
                 return std::monostate{};
             },
@@ -60,8 +62,13 @@ cpplox::Object cpplox::Interpreter::evaluate(const AST::pExpr &pExpr) {
 
 void cpplox::Interpreter::evalExpressionStmt(const AST::pExpressionStmt &pStmt) { evaluate(pStmt->expression); }
 
+void cpplox::Interpreter::evalIfStmt(const AST::pIfStmt &pStmt) {
+    if (isTruthy(evaluate(pStmt->condition))) execute(pStmt->thenBranch);
+    else if (!std::holds_alternative<std::nullptr_t>(pStmt->elseBranch)) execute(pStmt->elseBranch);
+}
+
 void cpplox::Interpreter::evalPrintStmt(const AST::pPrintStmt &pStmt) {
-    Object value = evaluate(pStmt->expression);
+    const Object value = evaluate(pStmt->expression);
     std::cout << value << std::endl;
 }
 
@@ -72,6 +79,14 @@ cpplox::Object cpplox::Interpreter::evalAssignExpr(const AST::pAssignExpr &pExpr
 }
 
 cpplox::Object cpplox::Interpreter::evalLiteralExpr(const AST::pLiteralExpr &pExpr) { return pExpr->value; }
+
+cpplox::Object cpplox::Interpreter::evalLogicalExpr(const AST::pLogicalExpr &pExpr) {
+    Object left = evaluate(pExpr->left);
+
+    if (pExpr->op.type == TokenType::OR) { if (isTruthy(left)) return left; } else { if (!isTruthy(left)) return left; }
+
+    return evaluate(pExpr->right);
+}
 
 cpplox::Object cpplox::Interpreter::evalGroupingExpr(const AST::pGroupingExpr &pExpr) { return evaluate(pExpr->expression); }
 
@@ -90,8 +105,8 @@ cpplox::Object cpplox::Interpreter::evalUnaryExpr(const AST::pUnaryExpr &pExpr) 
 }
 
 cpplox::Object cpplox::Interpreter::evalBinaryExpr(const AST::pBinaryExpr &pExpr) {
-    Object left = evaluate(pExpr->left);
-    Object right = evaluate(pExpr->right);
+    const Object left = evaluate(pExpr->left);
+    const Object right = evaluate(pExpr->right);
     switch (pExpr->op.type) {
         case TokenType::EQUAL_EQUAL:
             return left == right;
@@ -125,8 +140,7 @@ cpplox::Object cpplox::Interpreter::evalBinaryExpr(const AST::pBinaryExpr &pExpr
             if (std::holds_alternative<std::string>(left) &&
                 std::holds_alternative<std::string>(right))
                 return std::get<std::string>(left) + std::get<std::string>(right);
-            throw InterpretErr(Meta::sourceFile, pExpr->op.line,
-                               "Operands must be two numbers or two strings.");
+            throw InterpretErr(Meta::sourceFile, pExpr->op.line, "Operands must be two numbers or two strings.");
 
         // Unreachable.
         default:
@@ -134,7 +148,7 @@ cpplox::Object cpplox::Interpreter::evalBinaryExpr(const AST::pBinaryExpr &pExpr
     }
 }
 
-cpplox::Object cpplox::Interpreter::evalVariableExpr(const cpplox::AST::pVariableExpr &pExpr) { return environment->get(pExpr->name); }
+cpplox::Object cpplox::Interpreter::evalVariableExpr(const AST::pVariableExpr &pExpr) { return environment->get(pExpr->name); }
 
 bool cpplox::Interpreter::isTruthy(const Object &obj) const {
     if (std::holds_alternative<std::monostate>(obj)) return false;
