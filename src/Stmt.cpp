@@ -16,3 +16,6 @@ cpplox::AST::PrintStmt::PrintStmt(pExpr expression)
 
 cpplox::AST::VarStmt::VarStmt(Token name, pExpr initializer)
     : name(std::move(name)), initializer(std::move(initializer)) {}
+
+cpplox::AST::WhileStmt::WhileStmt(pExpr condition, pStmt body)
+    : condition(std::move(condition)), body(std::move(body)) {}

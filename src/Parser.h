@@ -38,8 +38,10 @@ namespace cpplox {
         auto declaration() -> AST::pStmt;
         auto varDeclaration() -> AST::pStmt;
         auto statement() -> AST::pStmt;
+        auto forStatement() -> AST::pStmt;
         auto ifStatement() -> AST::pStmt;
         auto printStatement() -> AST::pStmt;
+        auto whileStatement() -> AST::pStmt;
         auto expressionStatement() -> AST::pStmt;
         auto blockStatement() -> AST::pStmt;
 
@@ -51,8 +53,8 @@ namespace cpplox {
         auto factor() -> AST::pExpr;
         auto unary() -> AST::pExpr;
         auto primary() -> AST::pExpr;
-        auto logical_or() ->AST::pExpr;
-        auto logical_and() ->AST::pExpr;
+        auto logical_or() -> AST::pExpr;
+        auto logical_and() -> AST::pExpr;
 
         auto error(const Token &token, const std::string &msg) const -> ParseErr;
     };

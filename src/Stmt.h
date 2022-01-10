@@ -13,14 +13,16 @@ namespace cpplox::AST {
     class IfStmt;
     class PrintStmt;
     class VarStmt;
+    class WhileStmt;
 
     using pBlockStmt = std::unique_ptr<BlockStmt>;
     using pExpressionStmt = std::unique_ptr<ExpressionStmt>;
     using pIfStmt = std::unique_ptr<IfStmt>;
     using pPrintStmt = std::unique_ptr<PrintStmt>;
     using pVarStmt = std::unique_ptr<VarStmt>;
+    using pWhileStmt = std::unique_ptr<WhileStmt>;
 
-    using pStmt = std::variant<std::nullptr_t, pBlockStmt, pExpressionStmt, pIfStmt, pPrintStmt, pVarStmt>;
+    using pStmt = std::variant<std::nullptr_t, pBlockStmt, pExpressionStmt, pIfStmt, pPrintStmt, pVarStmt, pWhileStmt>;
 
     class BlockStmt {
     public:
@@ -53,6 +55,13 @@ namespace cpplox::AST {
         const Token name;
         const pExpr initializer;
         VarStmt(Token name, pExpr initializer);
+    };
+
+    class WhileStmt {
+    public:
+        const pExpr condition;
+        const pStmt body;
+        WhileStmt(pExpr condition, pStmt body);
     };
 
 }// namespace cpplox::AST

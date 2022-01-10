@@ -22,6 +22,7 @@ void cpplox::Interpreter::execute(const AST::pStmt &pStmt) {
                 if constexpr (std::is_same_v<T, AST::pIfStmt>) return evalIfStmt(pStmt);
                 if constexpr (std::is_same_v<T, AST::pPrintStmt>) return evalPrintStmt(pStmt);
                 if constexpr (std::is_same_v<T, AST::pVarStmt>) return evalVarStmt(pStmt);
+                if constexpr (std::is_same_v<T, AST::pWhileStmt>) return evalWhileStmt(pStmt);
             },
             pStmt);
 }
@@ -43,6 +44,8 @@ void cpplox::Interpreter::evalVarStmt(const AST::pVarStmt &pStmt) {
     if (!std::holds_alternative<std::nullptr_t>(pStmt->initializer)) value = evaluate(pStmt->initializer);
     environment->define((pStmt->name).lexeme, value);
 }
+
+void cpplox::Interpreter::evalWhileStmt(const AST::pWhileStmt &pStmt) { while (isTruthy(evaluate(pStmt->condition))) execute(pStmt->body); }
 
 cpplox::Object cpplox::Interpreter::evaluate(const AST::pExpr &pExpr) {
     return std::visit(

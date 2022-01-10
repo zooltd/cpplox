@@ -31,12 +31,57 @@ auto cpplox::Parser::varDeclaration() -> AST::pStmt {
     return std::make_unique<AST::VarStmt>(std::move(name), std::move(initializer));
 }
 
-// statement -> exprStmt | ifStmt | printStmt | whileStmt | block
+// statement -> exprStmt | forStmt | ifStmt | printStmt | whileStmt | block
 auto cpplox::Parser::statement() -> AST::pStmt {
+    if (match(TokenType::FOR)) return forStatement();
     if (match(TokenType::IF)) return ifStatement();
     if (match(TokenType::PRINT)) return printStatement();
+    if (match(TokenType::WHILE)) return whileStatement();
     if (match(TokenType::LEFT_BRACE)) return blockStatement();
     return expressionStatement();
+}
+
+// forStmt -> "for" "(" ( varDecl | exprStmt | ";" ) expression? ";" expression? ")" statement
+auto cpplox::Parser::forStatement() -> AST::pStmt {
+    consumeOrError(TokenType::LEFT_PAREN, "Expect '(' after 'for'.");
+
+    AST::pStmt initializer;
+    if (match(TokenType::SEMICOLON)) initializer = nullptr;
+    else if (match(TokenType::VAR))
+        initializer = varDeclaration();
+    else
+        initializer = expressionStatement();
+
+    AST::pExpr condition = nullptr;
+    if (!check(TokenType::SEMICOLON)) condition = expression();
+
+    consumeOrError(TokenType::SEMICOLON, "Expect ';' after loop condition.");
+
+    AST::pExpr increment = nullptr;
+    if (!check(TokenType::RIGHT_PAREN)) increment = expression();
+
+    consumeOrError(TokenType::RIGHT_PAREN, "Expect ')' after for clauses.");
+
+    AST::pStmt body = statement();
+
+    if (!std::holds_alternative<std::nullptr_t>(increment)) {
+        std::vector<AST::pStmt> stmts;
+        stmts.push_back(std::move(body));
+        stmts.emplace_back(std::make_unique<AST::ExpressionStmt>(std::move(increment)));
+        body = std::make_unique<AST::BlockStmt>(std::move(stmts));
+    }
+
+    if (std::holds_alternative<std::nullptr_t>(condition)) condition = std::make_unique<AST::LiteralExpr>(true);
+    body = std::make_unique<AST::WhileStmt>(std::move(condition), std::move(body));
+
+    if (!std::holds_alternative<std::nullptr_t>(initializer)) {
+        std::vector<AST::pStmt> stmts;
+        stmts.push_back(std::move(initializer));
+        stmts.push_back(std::move(body));
+        body = std::make_unique<AST::BlockStmt>(std::move(stmts));
+    }
+
+    return body;
 }
 
 // ifStmt -> "if" "(" expression ")" statement ( "else" statement )?
@@ -51,7 +96,6 @@ auto cpplox::Parser::ifStatement() -> AST::pStmt {
     AST::pStmt elseBranch = nullptr;
     if (match(TokenType::ELSE)) elseBranch = statement();
     return std::make_unique<AST::IfStmt>(std::move(condition), std::move(thenBranch), std::move(elseBranch));
-
 }
 
 // printStmt -> "print" expression ";"
@@ -59,6 +103,16 @@ auto cpplox::Parser::printStatement() -> AST::pStmt {
     AST::pExpr value = expression();
     consumeOrError(TokenType::SEMICOLON, "Expect ';' after value.");
     return std::make_unique<AST::PrintStmt>(std::move(value));
+}
+
+// whileStmt -> "while" "(" expression ")" statement
+auto cpplox::Parser::whileStatement() -> AST::pStmt {
+    consumeOrError(TokenType::LEFT_PAREN, "Expect '(' after 'while'.");
+    AST::pExpr condition = expression();
+    consumeOrError(TokenType::RIGHT_PAREN, "Expect ')' after condition.");
+    AST::pStmt body = statement();
+
+    return std::make_unique<AST::WhileStmt>(std::move(condition), std::move(body));
 }
 
 // block -> "{" declaration* "}"
@@ -201,10 +255,11 @@ cpplox::Token cpplox::Parser::consumeOrError(TokenType type, const std::string &
 }
 
 auto cpplox::Parser::error(const Token &token, const std::string &msg) const
--> ParseErr {
+        -> ParseErr {
     std::string error = msg;
     if (token.type == TokenType::EOF_TOKEN) error = " at end: " + error;
-    else error = " at '" + token.lexeme + "': " + error;
+    else
+        error = " at '" + token.lexeme + "': " + error;
     return ParseErr{Meta::sourceFile, token.line, error};
 }
 
@@ -231,13 +286,13 @@ void cpplox::Parser::synchronize() {
 //  This checks to see if the current token has any of the given types.
 //  If so, it consumes the token and returns true.
 //  Otherwise, it returns false and leaves the current token alone.
-template
-<
-    class
-    ...
-    T>
+template<
+        class
 
-bool cpplox::Parser::match(T ... types) {
+        ... T>
+
+
+bool cpplox::Parser::match(T... types) {
     if ((check(types) || ...)) {
         advance();
         return true;
