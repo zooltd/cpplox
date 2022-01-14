@@ -8,6 +8,9 @@
 #include <string>
 #include <vector>
 
+#define STRINGIFY(X) #X
+#define MAX_ARG_LIMIT 255
+
 namespace cpplox {
 
     using ParseErr = Errors::Err;
@@ -44,6 +47,8 @@ namespace cpplox {
         auto whileStatement() -> AST::pStmt;
         auto expressionStatement() -> AST::pStmt;
         auto blockStatement() -> AST::pStmt;
+        auto block() -> std::vector<AST::pStmt>;
+        auto function(const std::string &kind) -> AST::pStmt;
 
         auto assignment() -> AST::pExpr;
         auto expression() -> AST::pExpr;
@@ -52,6 +57,7 @@ namespace cpplox {
         auto term() -> AST::pExpr;
         auto factor() -> AST::pExpr;
         auto unary() -> AST::pExpr;
+        auto call() -> AST::pExpr;
         auto primary() -> AST::pExpr;
         auto logical_or() -> AST::pExpr;
         auto logical_and() -> AST::pExpr;

@@ -5,11 +5,13 @@
 #include "Token.h"
 #include <memory>
 #include <variant>
+#include <vector>
 
 namespace cpplox::AST {
 
     class AssignExpr;
     class BinaryExpr;
+    class CallExpr;
     class GroupingExpr;
     class LiteralExpr;
     class LogicalExpr;
@@ -18,13 +20,14 @@ namespace cpplox::AST {
 
     using pAssignExpr = std::unique_ptr<AssignExpr>;
     using pBinaryExpr = std::unique_ptr<BinaryExpr>;
+    using pCallExpr = std::unique_ptr<CallExpr>;
     using pGroupingExpr = std::unique_ptr<GroupingExpr>;
     using pLiteralExpr = std::unique_ptr<LiteralExpr>;
     using pLogicalExpr = std::unique_ptr<LogicalExpr>;
     using pUnaryExpr = std::unique_ptr<UnaryExpr>;
     using pVariableExpr = std::unique_ptr<VariableExpr>;
 
-    using pExpr = std::variant<std::nullptr_t, pAssignExpr, pBinaryExpr, pGroupingExpr, pLiteralExpr, pLogicalExpr, pUnaryExpr, pVariableExpr>;
+    using pExpr = std::variant<std::nullptr_t, pAssignExpr, pBinaryExpr, pCallExpr, pGroupingExpr, pLiteralExpr, pLogicalExpr, pUnaryExpr, pVariableExpr>;
 
     class AssignExpr {
     public:
@@ -39,6 +42,14 @@ namespace cpplox::AST {
         const Token op;
         const pExpr right;
         BinaryExpr(pExpr left, Token op, pExpr right);
+    };
+
+    class CallExpr {
+    public:
+        const pExpr callee;
+        const Token paren;
+        const std::vector<pExpr> arguments;
+        CallExpr(pExpr callee,Token paren , std::vector<pExpr> arguments);
     };
 
     class UnaryExpr {

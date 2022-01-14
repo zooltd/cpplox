@@ -9,9 +9,9 @@ cpplox::Environment::Environment()
 cpplox::Environment::Environment(pEnv enclosing)
     : enclosing(std::move(enclosing)) {}
 
-void cpplox::Environment::define(const std::string &name, cpplox::Object value) { values[name] = std::move(value); }
+void cpplox::Environment::define(const std::string &name, Object value) { values[name] = std::move(value); }
 
-cpplox::Object cpplox::Environment::get(const cpplox::Token &name) {
+cpplox::Object cpplox::Environment::get(const Token &name) {
     if (const auto v = values.find(name.lexeme); v != values.end()) return (*v).second;
     if (enclosing != nullptr) return enclosing->get(name);
     throw VarAccessErr(Meta::sourceFile, name.line, "Undefined variable '" + name.lexeme + "'.");

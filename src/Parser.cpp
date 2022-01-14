@@ -9,17 +9,37 @@ auto cpplox::Parser::parse() -> std::vector<AST::pStmt> {
     return statements;
 }
 
-// declaration -> varDecl | statement
+// declaration -> funDecl | varDecl | statement
 auto cpplox::Parser::declaration() -> AST::pStmt {
     try {
+        if (match(TokenType::FUN)) return function("function");
         if (match(TokenType::VAR)) return varDeclaration();
         return statement();
     } catch (const ParseErr &err) {
-        Errors::hadError = true;
         logger::error(err);
         synchronize();
         return nullptr;
     }
+}
+
+// funDecl -> "fun" function
+// function -> IDENTIFIER "(" parameters? ")" block
+// parameters -> IDENTIFIER ( "," IDENTIFIER )*
+auto cpplox::Parser::function(const std::string &kind) -> AST::pStmt {
+    Token name = consumeOrError(TokenType::IDENTIFIER, "Expect " + kind + " name.");
+
+    consumeOrError(TokenType::LEFT_PAREN, "Expect '(' after " + kind + " name.");
+    std::vector<Token> parameters;
+    if (!check(TokenType::RIGHT_PAREN)) {
+        do {
+            if (parameters.size() >= 255) error(peek(), "Can't have more than 255 parameters.");
+            parameters.emplace_back(consumeOrError(TokenType::IDENTIFIER, "Expect parameter name."));
+        } while (match(TokenType::COMMA));
+    }
+    consumeOrError(TokenType::RIGHT_PAREN, "Expect ')' after parameters.");
+    consumeOrError(TokenType::LEFT_BRACE, "Expect '{' before " + kind + " body.");
+    std::vector<AST::pStmt> body = block();
+    return std::make_unique<AST::FuncStmt>(std::move(name), std::move(parameters), std::move(body));
 }
 
 // varDecl -> "var" IDENTIFIER ( "=" expression )? ";"
@@ -47,10 +67,8 @@ auto cpplox::Parser::forStatement() -> AST::pStmt {
 
     AST::pStmt initializer;
     if (match(TokenType::SEMICOLON)) initializer = nullptr;
-    else if (match(TokenType::VAR))
-        initializer = varDeclaration();
-    else
-        initializer = expressionStatement();
+    else if (match(TokenType::VAR)) initializer = varDeclaration();
+    else initializer = expressionStatement();
 
     AST::pExpr condition = nullptr;
     if (!check(TokenType::SEMICOLON)) condition = expression();
@@ -67,7 +85,7 @@ auto cpplox::Parser::forStatement() -> AST::pStmt {
     if (!std::holds_alternative<std::nullptr_t>(increment)) {
         std::vector<AST::pStmt> stmts;
         stmts.push_back(std::move(body));
-        stmts.emplace_back(std::make_unique<AST::ExpressionStmt>(std::move(increment)));
+        stmts.emplace_back(std::make_unique<AST::ExprStmt>(std::move(increment)));
         body = std::make_unique<AST::BlockStmt>(std::move(stmts));
     }
 
@@ -116,18 +134,20 @@ auto cpplox::Parser::whileStatement() -> AST::pStmt {
 }
 
 // block -> "{" declaration* "}"
-auto cpplox::Parser::blockStatement() -> AST::pStmt {
+auto cpplox::Parser::blockStatement() -> AST::pStmt { return std::make_unique<AST::BlockStmt>(block()); }
+
+auto cpplox::Parser::block() -> std::vector<AST::pStmt> {
     std::vector<AST::pStmt> statements;
     while (!check(TokenType::RIGHT_BRACE) && !isAtEnd()) { statements.emplace_back(declaration()); }
     consumeOrError(TokenType::RIGHT_BRACE, "Expect '}' after block.");
-    return std::make_unique<AST::BlockStmt>(std::move(statements));
+    return statements;
 }
 
 // exprStmt -> expression ";"
 auto cpplox::Parser::expressionStatement() -> AST::pStmt {
     AST::pExpr expr = expression();
     consumeOrError(TokenType::SEMICOLON, "Expect ';' after expression.");
-    return std::make_unique<AST::ExpressionStmt>(std::move(expr));
+    return std::make_unique<AST::ExprStmt>(std::move(expr));
 }
 
 // expression -> assignment
@@ -146,7 +166,7 @@ auto cpplox::Parser::assignment() -> AST::pExpr {
             return std::make_unique<AST::AssignExpr>(std::move(name), std::move(value));
         }
 
-        error(equals, "Invalid assignment target.");
+        auto _ = error(equals, "Invalid assignment target.");
     }
 
     return expr;
@@ -223,15 +243,39 @@ auto cpplox::Parser::factor() -> AST::pExpr {
     return expr;
 }
 
-// unary -> ( "!" | "-" ) unary | primary
+// unary -> ( "!" | "-" ) unary | call
 auto cpplox::Parser::unary() -> AST::pExpr {
     if (match(TokenType::BANG, TokenType::MINUS)) {
         Token op = previous();
         AST::pExpr right = unary();
         return std::make_unique<AST::UnaryExpr>(op, std::move(right));
     }
-    return primary();
+    return call();
 }
+
+// call -> primary ( "(" arguments? ")" )*
+// arguments -> expression ( "," expression )*
+auto cpplox::Parser::call() -> AST::pExpr {
+    AST::pExpr expr = primary();
+    while (true) {
+        if (!match(TokenType::LEFT_PAREN)) break;
+
+        std::vector<AST::pExpr> arguments;
+        if (!check(TokenType::RIGHT_PAREN)) {
+            do {
+                // maximum argument counts
+                if (arguments.size() >= MAX_ARG_LIMIT) { auto _ = error(peek(), "Can't have more than " STRINGIFY(MAX_ARG_LIMIT) " arguments."); }
+                arguments.push_back(expression());
+            } while (match(TokenType::COMMA));
+        }
+        Token paren = consumeOrError(TokenType::RIGHT_PAREN, "Expect ')' after arguments.");
+        expr = std::make_unique<AST::CallExpr>(std::move(expr), std::move(paren), std::move(arguments));
+    }
+    return expr;
+}
+
+// the argument list
+
 
 // primary -> NUMBER | STRING | "true" | "false" | "nil" | "(" expression ")" | IDENTIFIER
 auto cpplox::Parser::primary() -> AST::pExpr {
@@ -254,12 +298,11 @@ cpplox::Token cpplox::Parser::consumeOrError(TokenType type, const std::string &
     throw error(peek(), message);
 }
 
-auto cpplox::Parser::error(const Token &token, const std::string &msg) const
-        -> ParseErr {
+auto cpplox::Parser::error(const Token &token, const std::string &msg) const -> ParseErr {
+    Errors::hadError = true;
     std::string error = msg;
     if (token.type == TokenType::EOF_TOKEN) error = " at end: " + error;
-    else
-        error = " at '" + token.lexeme + "': " + error;
+    else error = " at '" + token.lexeme + "': " + error;
     return ParseErr{Meta::sourceFile, token.line, error};
 }
 
@@ -287,12 +330,12 @@ void cpplox::Parser::synchronize() {
 //  If so, it consumes the token and returns true.
 //  Otherwise, it returns false and leaves the current token alone.
 template<
-        class
+    class
 
-        ... T>
+    ... T>
 
 
-bool cpplox::Parser::match(T... types) {
+bool cpplox::Parser::match(T ... types) {
     if ((check(types) || ...)) {
         advance();
         return true;

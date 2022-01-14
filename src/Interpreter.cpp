@@ -2,9 +2,10 @@
 #include "Meta.h"
 #include <iostream>
 #include <utility>
+#include <algorithm>
+#include "Function.h"
 
-cpplox::Interpreter::Interpreter()
-    : environment(new Environment()) {}
+cpplox::Interpreter::Interpreter() { globals->define("clock", std::make_shared<Clock>()); }
 
 void cpplox::Interpreter::interpret(const std::vector<AST::pStmt> &statements) {
     try { for (const AST::pStmt &pStmt: statements) execute(pStmt); } catch (const InterpretErr &error) {
@@ -17,8 +18,9 @@ void cpplox::Interpreter::execute(const AST::pStmt &pStmt) {
     return std::visit(
             [this](auto &&pStmt) -> void {
                 using T = std::decay_t<decltype(pStmt)>;
-                if constexpr (std::is_same_v<T, AST::pBlockStmt>) return evalBlockStmt(pStmt, std::make_shared<Environment>(environment));
+                if constexpr (std::is_same_v<T, AST::pBlockStmt>) return evalBlockStmt(pStmt);
                 if constexpr (std::is_same_v<T, AST::pExpressionStmt>) return evalExpressionStmt(pStmt);
+                if constexpr (std::is_same_v<T, AST::pFunctionStmt>) return evalFunctionStmt(pStmt);
                 if constexpr (std::is_same_v<T, AST::pIfStmt>) return evalIfStmt(pStmt);
                 if constexpr (std::is_same_v<T, AST::pPrintStmt>) return evalPrintStmt(pStmt);
                 if constexpr (std::is_same_v<T, AST::pVarStmt>) return evalVarStmt(pStmt);
@@ -27,11 +29,13 @@ void cpplox::Interpreter::execute(const AST::pStmt &pStmt) {
             pStmt);
 }
 
-void cpplox::Interpreter::evalBlockStmt(const AST::pBlockStmt &pStmt, pEnv blockEnv) {
+void cpplox::Interpreter::evalBlockStmt(const AST::pBlockStmt &pStmt) { executeBlock(pStmt->statements, std::make_shared<Environment>(environment)); }
+
+void cpplox::Interpreter::executeBlock(const std::vector<AST::pStmt> &statements, pEnv blockEnv) {
     const pEnv previous = this->environment;
     try {
         this->environment = std::move(blockEnv);
-        for (const AST::pStmt &statement: pStmt->statements) { execute(statement); }
+        for (const AST::pStmt &statement: statements) { execute(statement); }
     } catch (...) {
         this->environment = previous;
         // throw;
@@ -40,7 +44,7 @@ void cpplox::Interpreter::evalBlockStmt(const AST::pBlockStmt &pStmt, pEnv block
 }
 
 void cpplox::Interpreter::evalVarStmt(const AST::pVarStmt &pStmt) {
-    Object value = std::monostate{};
+    Object value = Object{};
     if (!std::holds_alternative<std::nullptr_t>(pStmt->initializer)) value = evaluate(pStmt->initializer);
     environment->define((pStmt->name).lexeme, value);
 }
@@ -53,17 +57,25 @@ cpplox::Object cpplox::Interpreter::evaluate(const AST::pExpr &pExpr) {
                 using T = std::decay_t<decltype(pExpr)>;
                 if constexpr (std::is_same_v<T, AST::pAssignExpr>) return evalAssignExpr(pExpr);
                 if constexpr (std::is_same_v<T, AST::pBinaryExpr>) return evalBinaryExpr(pExpr);
+                if constexpr (std::is_same_v<T, AST::pCallExpr>) return evalCallExpr(pExpr);
                 if constexpr (std::is_same_v<T, AST::pGroupingExpr>) return evalGroupingExpr(pExpr);
                 if constexpr (std::is_same_v<T, AST::pLiteralExpr>) return evalLiteralExpr(pExpr);
                 if constexpr (std::is_same_v<T, AST::pLogicalExpr>) return evalLogicalExpr(pExpr);
                 if constexpr (std::is_same_v<T, AST::pUnaryExpr>) return evalUnaryExpr(pExpr);
                 if constexpr (std::is_same_v<T, AST::pVariableExpr>) return evalVariableExpr(pExpr);
-                return std::monostate{};
+                return Object{};
             },
             pExpr);
 }
 
 void cpplox::Interpreter::evalExpressionStmt(const AST::pExpressionStmt &pStmt) { evaluate(pStmt->expression); }
+
+void cpplox::Interpreter::evalFunctionStmt(const AST::pFunctionStmt &pStmt) {
+    //FIXME const unique_ptr
+    const std::string name = pStmt->name.lexeme;
+    pFunction function = std::make_shared<Function>(pStmt);
+    environment->define(name, std::move(function));
+}
 
 void cpplox::Interpreter::evalIfStmt(const AST::pIfStmt &pStmt) {
     if (isTruthy(evaluate(pStmt->condition))) execute(pStmt->thenBranch);
@@ -103,7 +115,7 @@ cpplox::Object cpplox::Interpreter::evalUnaryExpr(const AST::pUnaryExpr &pExpr) 
             return -std::get<double>(right);
         // Unreachable
         default:
-            return std::monostate{};
+            return Object{};
     }
 }
 
@@ -147,8 +159,19 @@ cpplox::Object cpplox::Interpreter::evalBinaryExpr(const AST::pBinaryExpr &pExpr
 
         // Unreachable.
         default:
-            return std::monostate{};
+            return Object{};
     }
+}
+
+cpplox::Object cpplox::Interpreter::evalCallExpr(const AST::pCallExpr &pExpr) {
+    const Object callee = evaluate(pExpr->callee);
+
+    std::vector<Object> arguments;
+
+    std::for_each(pExpr->arguments.begin(), pExpr->arguments.end(), [this, &arguments](const AST::pExpr &p)-> void { arguments.emplace_back(evaluate(p)); });
+    // TODO
+    const pCallable func = std::get<pCallable>(callee);
+    return func->call(*this, arguments);
 }
 
 cpplox::Object cpplox::Interpreter::evalVariableExpr(const AST::pVariableExpr &pExpr) { return environment->get(pExpr->name); }

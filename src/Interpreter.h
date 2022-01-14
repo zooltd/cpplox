@@ -20,12 +20,16 @@ namespace cpplox {
         void interpret(const std::vector<AST::pStmt> &statements);
         Object evaluate(const AST::pExpr &pExpr);
         void execute(const AST::pStmt &pStmt);
+        pEnv globals{new Environment()};
+
+        void executeBlock(const std::vector<AST::pStmt> &statements, pEnv blockEnv);
 
     private:
-        pEnv environment;
+        pEnv environment = globals;
 
-        void evalBlockStmt(const AST::pBlockStmt &pStmt, pEnv blockEnv);
+        void evalBlockStmt(const AST::pBlockStmt &pStmt);
         void evalExpressionStmt(const AST::pExpressionStmt &pStmt);
+        void evalFunctionStmt(const AST::pFunctionStmt &pStmt);
         void evalIfStmt(const AST::pIfStmt &pStmt);
         void evalPrintStmt(const AST::pPrintStmt &pStmt);
         void evalVarStmt(const AST::pVarStmt &pStmt);
@@ -33,6 +37,7 @@ namespace cpplox {
 
         Object evalAssignExpr(const AST::pAssignExpr &pExpr);
         Object evalBinaryExpr(const AST::pBinaryExpr &pExpr);
+        Object evalCallExpr(const AST::pCallExpr &pExpr);
         Object evalGroupingExpr(const AST::pGroupingExpr &pExpr);
         Object evalLiteralExpr(const AST::pLiteralExpr &pExpr);
         Object evalUnaryExpr(const AST::pUnaryExpr &pExpr);
@@ -43,7 +48,6 @@ namespace cpplox {
         void checkNumberOperand(const Token &op, const Object &operand);
         void checkNumberOperands(const Token &op, const Object &left, const Object &right);
     };
-
 }// namespace cpplox
 
 #endif// CPPLOX_INTERPRETER_H

@@ -2,11 +2,14 @@
 
 #include <utility>
 
-cpplox::AST::BlockStmt::BlockStmt(std::vector<pStmt> statements)
+cpplox::AST::BlockStmt::BlockStmt(std::vector<pStmt> &&statements)
     : statements(std::move(statements)) {}
 
-cpplox::AST::ExpressionStmt::ExpressionStmt(pExpr expression)
+cpplox::AST::ExprStmt::ExprStmt(pExpr expression)
     : expression(std::move(expression)) {}
+
+cpplox::AST::FuncStmt::FuncStmt(Token name, std::vector<Token> params, std::vector<pStmt> body)
+    : name(std::move(name)), params(std::move(params)), body(std::move(body)) {}
 
 cpplox::AST::IfStmt::IfStmt(pExpr condition, pStmt thenBranch, pStmt elseBranch)
     : condition(std::move(condition)), thenBranch(std::move(thenBranch)), elseBranch(std::move(elseBranch)) {}

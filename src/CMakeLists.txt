@@ -17,6 +17,7 @@ target_sources(${PROJECT_NAME}.lib
         Environment.h
         Errors.h
         Expr.h
+         Function.h
         Interpreter.h
         Logger.h
         Meta.h
